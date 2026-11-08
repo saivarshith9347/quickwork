@@ -39,7 +39,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
+import { ApplicationService } from "@/lib/services/application-service";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -201,8 +202,11 @@ function buildMockDetail(jobId: string): JobDetail {
 
 async function fetchJobDetail(jobId: string): Promise<JobDetail> {
   try {
+    const client = getSupabase();
+    if (!client) return buildMockDetail(jobId);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: job, error } = await (supabase as any)
+    const { data: job, error } = await (client as any)
       .from("jobs")
       .select(`
         id, job_title, venue_name, area, city, job_date, start_time, end_time,
@@ -372,18 +376,35 @@ function ApplicantCard({
   async function act(newStatus: "ACCEPTED" | "REJECTED") {
     setActing(true);
     if (!isMock) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from("applications")
-        .update({
-          status: newStatus,
-          ...(newStatus === "ACCEPTED" ? { confirmed_at: new Date().toISOString() } : {}),
-        })
-        .eq("id", app.id);
-      if (error) {
-        toast.error("Action failed. Please try again.");
+      const result = await ApplicationService.updateApplicationStatus(app.id, newStatus);
+      if (!result.success) {
+        toast.error(`Action failed: ${result.error}`);
         setActing(false);
         return;
+      }
+
+      // Keep position table in sync if position is tied to this application
+      if (app.position_id) {
+        const client = getSupabase();
+        if (client) {
+          if (newStatus === "ACCEPTED") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (client as any).from("job_positions").update({
+              status: "BOOKED",
+              worker_id: app.worker_id,
+              application_id: app.id,
+              lock_expires_at: null,
+            }).eq("id", app.position_id);
+          } else if (newStatus === "REJECTED") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (client as any).from("job_positions").update({
+              status: "AVAILABLE",
+              worker_id: null,
+              application_id: null,
+              lock_expires_at: null,
+            }).eq("id", app.position_id).eq("worker_id", app.worker_id);
+          }
+        }
       }
     } else {
       await new Promise((r) => setTimeout(r, 500));

@@ -10,13 +10,16 @@ import {
   Phone,
   Share2,
   Wallet,
+  Loader2,
 } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { useApplications } from "@/lib/application-model";
+import { useApplication } from "@/lib/hooks/use-applications";
+import { useJob } from "@/lib/hooks/use-jobs";
 import { useAuth } from "@/lib/auth-context";
+import { formatLocation } from "@/lib/job-types";
 
 export const Route = createFileRoute("/booking-confirmation/$applicationId")({
   head: () => ({
@@ -77,9 +80,14 @@ function BookingConfirmationPage() {
   const { applicationId } = Route.useParams();
   const navigate = useNavigate();
   const { user, isLoggedIn } = useAuth();
-  const { getApplication } = useApplications();
-
-  const application = getApplication(applicationId);
+  
+  // Fetch application using React Query
+  const { data: application, isLoading: appLoading } = useApplication(applicationId);
+  
+  // Fetch job details if we have an application
+  const { data: job, isLoading: jobLoading } = useJob(application?.jobId, {
+    enabled: !!application?.jobId,
+  });
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -88,31 +96,37 @@ function BookingConfirmationPage() {
       return;
     }
 
-    if (!application) {
+    if (!appLoading && !application) {
       toast.error("Booking confirmation not found");
       navigate({ to: "/work" });
       return;
     }
 
-    if (application.status !== "Confirmed") {
+    if (application && application.status !== "BOOKED" && application.status !== "ACCEPTED") {
       toast.error("This application has not been confirmed yet");
       navigate({ to: "/my-applications" });
       return;
     }
 
     // Check if this application belongs to the logged-in user
-    if (application.workerId !== user?.id) {
+    if (application && application.workerId !== user?.id) {
       toast.error("You don't have permission to view this booking");
       navigate({ to: "/work" });
       return;
     }
-  }, [isLoggedIn, application, user, navigate, applicationId]);
+  }, [isLoggedIn, application, user, navigate, applicationId, appLoading]);
 
-  if (!application || !isLoggedIn || application.status !== "Confirmed") {
-    return null;
+  if (appLoading || jobLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  const job = mockJobs[application.jobId];
+  if (!application || !isLoggedIn || (application.status !== "BOOKED" && application.status !== "ACCEPTED")) {
+    return null;
+  }
 
   if (!job) {
     return (
@@ -128,8 +142,13 @@ function BookingConfirmationPage() {
     );
   }
 
+  // Extract location
+  const location = typeof job.location === 'object' 
+    ? job.location 
+    : { venueName: formatLocation(job.location, 'short'), fullAddress: job.location };
+
   // Generate booking ID from application ID
-  const bookingId = `BK${application.id.split("_")[1]?.substring(0, 8).toUpperCase() || "XXXXXXXX"}`;
+  const bookingId = `BK${application.id.substring(0, 8).toUpperCase()}`;
 
   // Format dates
   const jobDate = new Date(job.date);
@@ -143,14 +162,14 @@ function BookingConfirmationPage() {
   // Format reporting time (30 minutes before shift start)
   const [startHours, startMinutes] = job.startTime.split(":").map(Number);
   const reportingDate = new Date(job.date);
-  reportingDate.setHours(startHours, startMinutes - 30, 0, 0);
+  reportingDate.setHours(startHours || 0, (startMinutes || 0) - 30, 0, 0);
   const reportingTime = reportingDate.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
   });
 
   const shiftStartTime = new Date(job.date);
-  shiftStartTime.setHours(startHours, startMinutes, 0, 0);
+  shiftStartTime.setHours(startHours ?? 0, startMinutes ?? 0, 0, 0);
   const formattedStartTime = shiftStartTime.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
@@ -158,14 +177,15 @@ function BookingConfirmationPage() {
 
   const [endHours, endMinutes] = job.endTime.split(":").map(Number);
   const shiftEndTime = new Date(job.date);
-  shiftEndTime.setHours(endHours, endMinutes, 0, 0);
+  shiftEndTime.setHours(endHours ?? 0, endMinutes ?? 0, 0, 0);
   const formattedEndTime = shiftEndTime.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
   });
 
   function handleShare() {
-    const shareText = `Booking Confirmed!\n\nJob: ${job.jobTitle}\nDate: ${formattedDate}\nTime: ${formattedStartTime} - ${formattedEndTime}\nLocation: ${job.venueName}, ${job.area}\nBooking ID: ${bookingId}`;
+    if (!job) return;
+    const shareText = `Booking Confirmed!\n\nJob: ${job.jobTitle}\nDate: ${formattedDate}\nTime: ${formattedStartTime} - ${formattedEndTime}\nLocation: ${location.venueName}\nBooking ID: ${bookingId}`;
 
     if (navigator.share) {
       navigator
@@ -219,7 +239,7 @@ function BookingConfirmationPage() {
           {/* Job Title & Employer */}
           <div className="rounded-2xl border border-border bg-card p-6">
             <h2 className="text-xl font-bold">{job.jobTitle}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{job.employer}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Employer</p>
           </div>
 
           {/* Date & Time */}
@@ -247,10 +267,10 @@ function BookingConfirmationPage() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-muted-foreground">Location</p>
-                <p className="mt-1 font-semibold">{job.venueName}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{job.location}</p>
+                <p className="mt-1 font-semibold">{location.venueName}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{location.fullAddress}</p>
                 <a
-                  href={`https://maps.google.com/?q=${encodeURIComponent(job.location)}`}
+                  href={`https://maps.google.com/?q=${encodeURIComponent(location.fullAddress)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
@@ -283,7 +303,7 @@ function BookingConfirmationPage() {
                       : "text-primary"
                   }`}
                 >
-                  {job.wageDisplay}
+                  ₹{job.wage.toLocaleString("en-IN")}
                 </p>
                 <p className="text-sm text-muted-foreground">per worker</p>
                 {job.isRapidJob && (
@@ -338,10 +358,10 @@ function BookingConfirmationPage() {
           )}
 
           {/* Employer Note (if provided) */}
-          {application.posterNote && (
+          {application.employerNote && (
             <div className="rounded-2xl border border-border bg-card p-6">
               <p className="text-sm font-semibold text-muted-foreground">Message from Employer</p>
-              <p className="mt-2 text-sm italic">"{application.posterNote}"</p>
+              <p className="mt-2 text-sm italic">"{application.employerNote}"</p>
             </div>
           )}
         </div>

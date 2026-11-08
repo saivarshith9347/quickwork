@@ -46,7 +46,8 @@ import {
   subscribeToJobPositions,
   broadcastPositionUpdate,
 } from "@/lib/position-service";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
+import { ApplicationService } from "@/lib/services/application-service";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -250,29 +251,20 @@ const MOCK_WAGES: Record<string, number> = {
 async function rpcReservePosition(
   positionId: string,
 ): Promise<{ ok: boolean; lockExpiresAt: string | null; error: string | null }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("reserve_position", {
-    p_position_id: positionId,
-  });
-  if (error) return { ok: false, lockExpiresAt: null, error: error.message };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const d = data as any;
-  if (!d?.success)
-    return { ok: false, lockExpiresAt: null, error: d?.error ?? "reserve_failed" };
-  return { ok: true, lockExpiresAt: d.lock_expires_at ?? null, error: null };
+  const result = await ApplicationService.reservePosition({ positionId });
+  if (!result.success) {
+    return { ok: false, lockExpiresAt: null, error: result.error };
+  }
+  return { ok: true, lockExpiresAt: result.lockExpiresAt, error: null };
 }
 
 async function rpcReleasePosition(
   positionId: string,
 ): Promise<{ ok: boolean; error: string | null }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("release_position", {
-    p_position_id: positionId,
-  });
-  if (error) return { ok: false, error: error.message };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const d = data as any;
-  if (!d?.success) return { ok: false, error: d?.error ?? "release_failed" };
+  const result = await ApplicationService.releasePosition(positionId);
+  if (!result.success) {
+    return { ok: false, error: result.error };
+  }
   return { ok: true, error: null };
 }
 
@@ -552,8 +544,24 @@ function PositionSelectionPage() {
     async function load() {
       setLoading(true);
 
+      const client = getSupabase();
+      if (!client) {
+        const mockStats = makeMockStats(jobId);
+        const chosenCat =
+          requestedCatId && mockStats.categories.some((c) => c.category_id === requestedCatId)
+            ? requestedCatId
+            : "cat-1";
+        setJobMeta(MOCK_JOB_META);
+        setWages(MOCK_WAGES);
+        setStats(mockStats);
+        setActiveCategoryId(chosenCat);
+        setIsMock(true);
+        setLoading(false);
+        return;
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: jobRow, error: jobError } = await (supabase as any)
+      const { data: jobRow, error: jobError } = await (client as any)
         .from("jobs")
         .select(
           "job_title, venue_name, area, city, job_date, start_time, end_time, is_rapid_job, rapid_job_expires_at, status, job_categories(id, wage)",

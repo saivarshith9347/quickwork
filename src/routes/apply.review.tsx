@@ -37,7 +37,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { RapidJobBadge } from "@/components/rapid-job-badge";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
+import { ApplicationService } from "@/lib/services/application-service";
 import { broadcastPositionUpdate, subscribeToJobPositions } from "@/lib/position-service";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -213,8 +214,11 @@ function ReviewPage() {
 
   async function enrichFromSupabase(jobId: string): Promise<Partial<PendingBooking> | null> {
     try {
+      const client = getSupabase();
+      if (!client) return null;
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
+      const { data } = await (client as any)
         .from("jobs")
         .select("job_date, start_time, end_time, area, city, venue_name, facilities, is_rapid_job")
         .eq("id", jobId)
@@ -248,7 +252,7 @@ function ReviewPage() {
       return;
     }
 
-    const isMock = booking.jobId.startsWith("mock") || !supabase;
+    const isMock = booking.jobId.startsWith("mock") || !getSupabase();
     if (isMock) {
       setConfirming(true);
       await new Promise((r) => setTimeout(r, 600));
@@ -301,25 +305,15 @@ function ReviewPage() {
     setConfirmError(null);
     setErrorCode(null);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).rpc("confirm_booking", {
-      p_position_id: booking.positionId,
+    const result = await ApplicationService.confirmBooking({
+      positionId: booking.positionId,
     });
 
-    if (error) {
+    if (!result.success) {
       setConfirming(false);
-      setConfirmError(error.message ?? "Something went wrong. Please try again.");
-      return;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = data as any;
-
-    if (!result?.success) {
-      setConfirming(false);
-      const code = result?.error ?? "unknown";
+      const code = result.error ?? "unknown";
       setErrorCode(code);
-      setConfirmError(CONFIRM_BOOKING_ERRORS[code] ?? "This position is no longer available.");
+      setConfirmError(CONFIRM_BOOKING_ERRORS[code] ?? result.error ?? "This position is no longer available.");
       return;
     }
 
@@ -334,7 +328,7 @@ function ReviewPage() {
     });
 
     // ✅ Success — store application ID and navigate
-    const applicationId = result.application_id as string;
+    const applicationId = result.applicationId;
     sessionStorage.setItem(
       "qw_confirmed_booking",
       JSON.stringify({

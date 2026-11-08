@@ -25,12 +25,9 @@ import {
   Loader2,
 } from "lucide-react";
 import {
-  useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
-  useTransition,
 } from "react";
 import { toast } from "sonner";
 
@@ -45,8 +42,14 @@ import { getDistanceToJob } from "@/lib/distance-utils";
 import {
   JOB_CATEGORY_LABELS,
   type JobCategoryValue,
+  type BaseJob,
+  formatLocation,
+  calculateDuration,
+  toJobListing,
+  type JobListing as JobListingType,
 } from "@/lib/job-types";
-import { supabase } from "@/lib/supabase";
+import { useJobs } from "@/lib/hooks/use-jobs";
+import { getSupabase } from "@/lib/supabase";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -103,330 +106,116 @@ type FilterId =
   | "wage-1200"
   | "wage-1500";
 
-interface JobListing {
-  id: string;
-  jobTitle: string;
-  category: string;
-  description: string;
+// Extended JobListing with additional fields for job cards
+interface WorkJobListing extends JobListingType {
   venueName: string;
-  area: string;
   city: string;
-  jobDate: string;       // YYYY-MM-DD
-  startTime: string;     // HH:MM
-  endTime: string;       // HH:MM
+  jobDate: string;
   isRapidJob: boolean;
   rapidJobExpiresAt: string | null;
   status: string;
-  facilities: string[];
   isVerifiedEmployer: boolean;
-  // Category summary (denormalised for card display)
-  minWage: number;       // lowest wage across categories
-  maxWage: number;       // highest wage
-  categoryNames: string[];  // e.g. ["Food Serving", "Liquor Serving"]
-  // Position counts (aggregated)
+  minWage: number;
+  maxWage: number;
+  categoryNames: string[];
   totalPositions: number;
   availablePositions: number;
 }
 
-// ─── Supabase query ───────────────────────────────────────────────────────────
+type JobListing = WorkJobListing;
 
-interface FetchParams {
-  searchQuery: string;
-  activeFilters: FilterId[];
-  selectedCategory: JobCategoryValue | "All";
-  page: number;
-}
+// ─── Mock Data (fallback when Supabase not configured) ───────────────────────
 
-async function fetchJobs(params: FetchParams): Promise<{
-  jobs: JobListing[];
-  hasMore: boolean;
-  error: string | null;
-}> {
-  const { searchQuery, activeFilters, selectedCategory, page } = params;
-
-  // Build the base query — only columns needed for the card
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
-    .from("jobs")
-    .select(
-      `
-      id,
-      job_title,
-      category,
-      description,
-      venue_name,
-      area,
-      city,
-      job_date,
-      start_time,
-      end_time,
-      is_rapid_job,
-      rapid_job_expires_at,
-      status,
-      facilities,
-      job_categories ( name, wage, sort_order ),
-      job_positions ( status )
-      `,
-      { count: "exact" }
-    )
-    // Only open jobs
-    .in("status", ["Open", "PartiallyFilled"])
-    // Jobs on or after today
-    .gte("job_date", TODAY_ISO)
-    // Order: Rapid first, then by date, then newest
-    .order("is_rapid_job", { ascending: false })
-    .order("job_date", { ascending: true })
-    .order("created_at", { ascending: false })
-    // Pagination
-    .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
-
-  // Server-side filters
-  if (selectedCategory !== "All") {
-    query = query.eq("category", selectedCategory);
-  }
-  if (activeFilters.includes("rapid")) {
-    query = query.eq("is_rapid_job", true);
-  }
-  if (activeFilters.includes("today")) {
-    query = query.eq("job_date", TODAY_ISO);
-  }
-  if (activeFilters.includes("tomorrow")) {
-    query = query.eq("job_date", TOMORROW_ISO);
-  }
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    return { jobs: [], hasMore: false, error: error.message };
-  }
-
-  // Transform raw rows → JobListing
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const jobs: JobListing[] = (data as any[]).map((row: any) => {
-    const categories = (row.job_categories ?? []) as {
-      name: string;
-      wage: number;
-      sort_order: number;
-    }[];
-    const positions = (row.job_positions ?? []) as { status: string }[];
-
-    const wages = categories.map((c) => c.wage);
-    const minWage = wages.length > 0 ? Math.min(...wages) : 0;
-    const maxWage = wages.length > 0 ? Math.max(...wages) : 0;
-    const categoryNames = [...categories]
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((c) => c.name);
-
-    const totalPositions = positions.filter(
-      (p) => p.status !== "CANCELLED"
-    ).length;
-    const availablePositions = positions.filter(
-      (p) => p.status === "AVAILABLE"
-    ).length;
-
-    return {
-      id: row.id as string,
-      jobTitle: row.job_title as string,
-      category: row.category as string,
-      description: row.description as string,
-      venueName: row.venue_name as string,
-      area: row.area as string,
-      city: row.city as string,
-      jobDate: row.job_date as string,
-      startTime: (row.start_time as string).slice(0, 5),
-      endTime: (row.end_time as string).slice(0, 5),
-      isRapidJob: row.is_rapid_job as boolean,
-      rapidJobExpiresAt: row.rapid_job_expires_at as string | null,
-      status: row.status as string,
-      facilities: (row.facilities ?? []) as string[],
-      isVerifiedEmployer: false, // will join profiles in next phase
-      minWage,
-      maxWage,
-      categoryNames,
-      totalPositions,
-      availablePositions,
-    };
-  });
-
-  // Client-side wage filters (can't do cleanly server-side without aggregation)
-  const filtered = jobs.filter((job) => {
-    if (activeFilters.includes("wage-1500") && job.maxWage < 1500) return false;
-    if (activeFilters.includes("wage-1200") && job.maxWage < 1200) return false;
-    if (activeFilters.includes("wage-1000") && job.maxWage < 1000) return false;
-    if (
-      searchQuery.trim() &&
-      !job.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !job.category.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !job.area.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !job.city.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !job.venueName.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-      return false;
-    return true;
-  });
-
-  const hasMore = count != null ? (page + 1) * PAGE_SIZE < count : false;
-
-  return { jobs: filtered, hasMore, error: null };
-}
-
-// ─── Mock data fallback (no Supabase env vars) ────────────────────────────────
-
-// ─── Mock data fallback (no Supabase env vars) ────────────────────────────────
-
-function buildDynamicMockJobs(): JobListing[] {
-  const now = Date.now();
-  // Target 1: Starts in ~47 minutes 32 seconds (matching prompt example!)
-  const rapid1Start = new Date(now + (47 * 60 + 32) * 1000);
-  const rapid1StartStr = `${String(rapid1Start.getHours()).padStart(2, "0")}:${String(rapid1Start.getMinutes()).padStart(2, "0")}`;
-  const rapid1End = new Date(now + (47 * 60 + 32 + 4 * 3600) * 1000);
-  const rapid1EndStr = `${String(rapid1End.getHours()).padStart(2, "0")}:${String(rapid1End.getMinutes()).padStart(2, "0")}`;
-
-  // Target 2: Starts in ~24 minutes 15 seconds
-  const rapid2Start = new Date(now + (24 * 60 + 15) * 1000);
-  const rapid2StartStr = `${String(rapid2Start.getHours()).padStart(2, "0")}:${String(rapid2Start.getMinutes()).padStart(2, "0")}`;
-  const rapid2End = new Date(now + (24 * 60 + 15 + 5 * 3600) * 1000);
-  const rapid2EndStr = `${String(rapid2End.getHours()).padStart(2, "0")}:${String(rapid2End.getMinutes()).padStart(2, "0")}`;
-
-  return [
-    {
-      id: "mock-1",
-      jobTitle: "Banquet Server",
-      category: "Hospitality",
-      description: "Urgent banquet server needed immediately for high-end wedding reception at Grand Sapphire Banquets. Tasks include table service, starter circulation, and guest assistance.",
-      venueName: "Grand Sapphire Banquets",
-      area: "Gachibowli",
-      city: "Hyderabad",
-      jobDate: TODAY_ISO,
-      startTime: rapid1StartStr,
-      endTime: rapid1EndStr,
-      isRapidJob: true,
-      rapidJobExpiresAt: rapid1Start.toISOString(),
-      status: "Open",
-      facilities: ["Meals provided", "Uniform"],
-      isVerifiedEmployer: true,
-      minWage: 1500,
-      maxWage: 1500,
-      categoryNames: ["Food Serving", "Liquor Serving"],
-      totalPositions: 5,
-      availablePositions: 3, // 3 workers required!
-    },
-    {
-      id: "mock-2",
-      jobTitle: "Corporate Conference Stewards",
-      category: "Events",
-      description: "Professional event stewards for a 2-day corporate conference.",
-      venueName: "HICC Convention Centre",
-      area: "Madhapur",
-      city: "Hyderabad",
-      jobDate: TODAY_ISO,
-      startTime: "14:00",
-      endTime: "21:00",
-      isRapidJob: false,
-      rapidJobExpiresAt: null,
-      status: "Open",
-      facilities: ["Meals provided", "Transport", "Uniform"],
-      isVerifiedEmployer: true,
-      minWage: 1400,
-      maxWage: 1400,
-      categoryNames: ["Registration Desk", "Floor Stewards", "AV Crew"],
-      totalPositions: 18,
-      availablePositions: 12,
-    },
-    {
-      id: "mock-3",
-      jobTitle: "Warehouse Loading Staff — Weekend Shift",
-      category: "Warehouse",
-      description: "Need warehouse loading staff for weekend inventory shift. Must be able to lift 20 kg+.",
-      venueName: "Urban Logistics Hub",
-      area: "Uppal",
-      city: "Hyderabad",
-      jobDate: TOMORROW_ISO,
-      startTime: "06:00",
-      endTime: "14:00",
-      isRapidJob: false,
-      rapidJobExpiresAt: null,
-      status: "PartiallyFilled",
-      facilities: ["Meals provided", "Transport"],
-      isVerifiedEmployer: false,
-      minWage: 1100,
-      maxWage: 1100,
-      categoryNames: ["Loading Crew"],
-      totalPositions: 10,
-      availablePositions: 6,
-    },
-    {
-      id: "mock-4",
-      jobTitle: "Food Court Servers — Phoenix Mall",
-      category: "Retail",
-      description: "Experienced food court servers for immediate rush hours at Phoenix Mall.",
-      venueName: "Phoenix Palladium Mall",
-      area: "Manikonda",
-      city: "Hyderabad",
-      jobDate: TODAY_ISO,
-      startTime: rapid2StartStr,
-      endTime: rapid2EndStr,
-      isRapidJob: true,
-      rapidJobExpiresAt: rapid2Start.toISOString(),
-      status: "Open",
-      facilities: ["Meals provided"],
-      isVerifiedEmployer: true,
-      minWage: 1200,
-      maxWage: 1200,
-      categoryNames: ["Floor Servers", "Cashier Desk"],
-      totalPositions: 6,
-      availablePositions: 2,
-    },
-    {
-      id: "mock-5",
-      jobTitle: "Banquet Kitchen Crew",
-      category: "Hospitality",
-      description: "Kitchen preparation and plating crew for large banquet event.",
-      venueName: "Novotel Hyderabad Airport",
-      area: "Shamshabad",
-      city: "Hyderabad",
-      jobDate: TOMORROW_ISO,
-      startTime: "14:00",
-      endTime: "22:00",
-      isRapidJob: false,
-      rapidJobExpiresAt: null,
-      status: "Open",
-      facilities: ["Meals provided", "Uniform"],
-      isVerifiedEmployer: true,
-      minWage: 1300,
-      maxWage: 1500,
-      categoryNames: ["Kitchen Prep", "Plating", "Desserts"],
-      totalPositions: 9,
-      availablePositions: 9,
-    },
-    {
-      id: "mock-6",
-      jobTitle: "E-commerce Delivery Partners — Weekend Rush",
-      category: "Delivery",
-      description: "Own vehicle required. High-density delivery run for weekend orders.",
-      venueName: "Distribution Hub",
-      area: "Kukatpally",
-      city: "Hyderabad",
-      jobDate: TOMORROW_ISO,
-      startTime: "08:00",
-      endTime: "20:00",
-      isRapidJob: false,
-      rapidJobExpiresAt: null,
-      status: "Open",
-      facilities: [],
-      isVerifiedEmployer: false,
-      minWage: 1500,
-      maxWage: 1500,
-      categoryNames: ["Delivery Riders"],
-      totalPositions: 15,
-      availablePositions: 10,
-    },
-  ];
-}
-
-const MOCK_JOBS: JobListing[] = buildDynamicMockJobs();
+const MOCK_JOBS: WorkJobListing[] = [
+  {
+    id: "mock-1",
+    jobTitle: "Banquet Server - Urgent",
+    category: "Hospitality",
+    employer: "Grand Events",
+    rating: "4.8",
+    wage: 1500,
+    wageDisplay: "₹1,500",
+    date: TODAY_ISO,
+    startTime: "18:00",
+    endTime: "23:00",
+    duration: 300,
+    location: "Gachibowli, Hyderabad",
+    area: "Gachibowli",
+    distance: "2.5 km",
+    facilities: ["Meals provided", "Uniform"],
+    jobType: "one-time",
+    description: "Urgent banquet server needed for wedding reception",
+    venueName: "Grand Sapphire Banquets",
+    city: "Hyderabad",
+    jobDate: TODAY_ISO,
+    isRapidJob: true,
+    rapidJobExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    status: "Open",
+    isVerifiedEmployer: true,
+    minWage: 1500,
+    maxWage: 1500,
+    categoryNames: ["Food Serving"],
+    totalPositions: 5,
+    availablePositions: 3,
+  },
+  {
+    id: "mock-2",
+    jobTitle: "Warehouse Loading Staff",
+    category: "Warehouse",
+    employer: "Urban Logistics",
+    wage: 1100,
+    wageDisplay: "₹1,100",
+    date: TOMORROW_ISO,
+    startTime: "06:00",
+    endTime: "14:00",
+    duration: 480,
+    location: "Uppal, Hyderabad",
+    area: "Uppal",
+    facilities: ["Transport"],
+    jobType: "one-time",
+    description: "Weekend inventory shift - must lift 20kg+",
+    venueName: "Urban Logistics Hub",
+    city: "Hyderabad",
+    jobDate: TOMORROW_ISO,
+    isRapidJob: false,
+    rapidJobExpiresAt: null,
+    status: "PartiallyFilled",
+    isVerifiedEmployer: false,
+    minWage: 1100,
+    maxWage: 1100,
+    categoryNames: ["Loading Crew"],
+    totalPositions: 10,
+    availablePositions: 6,
+  },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Transform BaseJob from service to WorkJobListing for display.
+ * Handles employer verification status (simplified for now).
+ */
+function baseJobToJobListing(job: BaseJob): WorkJobListing {
+  const baseJobListing = toJobListing(job, {
+    employerName: 'Unknown Employer',
+  });
+  
+  return {
+    ...baseJobListing,
+    venueName: typeof job.location === 'object' ? job.location.venueName : formatLocation(job.location, 'short'),
+    city: typeof job.location === 'object' ? job.location.city : '',
+    jobDate: job.date,
+    isRapidJob: job.isRapidJob,
+    rapidJobExpiresAt: job.rapidJobExpiresAt || null,
+    status: job.status,
+    isVerifiedEmployer: false, // TODO: Join with employer profile
+    minWage: job.wage,
+    maxWage: job.wage,
+    categoryNames: [job.category],
+    totalPositions: job.positionsRequired,
+    availablePositions: job.positionsRemaining,
+  };
+}
 
 function formatDate(isoDate: string, startTime: string): string {
   const date = new Date(isoDate + "T00:00");
@@ -647,7 +436,7 @@ function JobCard({ job, index }: JobCardProps) {
           {/* Work categories pills */}
           {job.categoryNames.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {job.categoryNames.slice(0, 4).map((name) => (
+              {job.categoryNames.slice(0, 4).map((name: string) => (
                 <span
                   key={name}
                   className="rounded-md border border-border bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground"
@@ -689,9 +478,9 @@ function JobCard({ job, index }: JobCardProps) {
           </div>
 
           {/* Facilities */}
-          {job.facilities.length > 0 && (
+          {job.facilities && job.facilities.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {job.facilities.slice(0, 3).map((f) => (
+              {job.facilities.slice(0, 3).map((f: string) => (
                 <span
                   key={f}
                   className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/8 px-2 py-0.5 text-[11px] font-medium text-success"
@@ -815,20 +604,89 @@ function FilterPill({
 function WorkPage() {
   const { isLoggedIn, openLoginModal } = useAuth();
 
-  // State
-  const [searchQuery, setSearchQuery]   = useState("");
-  const [draftSearch, setDraftSearch]   = useState(""); // debounced
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [draftSearch, setDraftSearch] = useState("");
   const [activeFilters, setActiveFilters] = useState<FilterId[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<JobCategoryValue | "All">("All");
-  const [page, setPage]               = useState(0);
 
-  // Data
-  const [jobs, setJobs]               = useState<JobListing[]>(() => buildDynamicMockJobs());
-  const [loading, setLoading]         = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore]         = useState(false);
-  const [error, setError]             = useState<string | null>(null);
-  const [isMockData, setIsMockData]   = useState(true);
+  // Check if Supabase is configured
+  const supabaseClient = getSupabase();
+  const isMockData = !supabaseClient;
+
+  // Build query params for React Query
+  const queryParams = useMemo(() => {
+    const params: {
+      status?: 'Open' | 'PartiallyFilled';
+      category?: JobCategoryValue;
+      isRapidJob?: boolean;
+      limit?: number;
+    } = {
+      limit: 50, // Fetch more initially, we'll filter client-side
+    };
+
+    if (selectedCategory !== "All") {
+      params.category = selectedCategory;
+    }
+
+    if (activeFilters.includes("rapid")) {
+      params.isRapidJob = true;
+    }
+
+    return params;
+  }, [selectedCategory, activeFilters]);
+
+  // Fetch jobs using React Query hook
+  const { data: baseJobs, isLoading, error, refetch } = useJobs(queryParams, {
+    enabled: !isMockData, // Only fetch if Supabase is configured
+    staleTime: 2 * 60 * 1000, // 2 minutes for job browsing
+  });
+
+  // Transform BaseJob[] to JobListing[] and apply client-side filters
+  const jobs = useMemo(() => {
+    // Use mock data if Supabase not configured
+    if (isMockData || !baseJobs) {
+      return MOCK_JOBS;
+    }
+
+    // Transform to JobListing format
+    let transformed = baseJobs.map(baseJobToJobListing);
+
+    // Apply client-side filters
+    if (activeFilters.includes("today")) {
+      transformed = transformed.filter(j => j.jobDate === TODAY_ISO);
+    }
+    if (activeFilters.includes("tomorrow")) {
+      transformed = transformed.filter(j => j.jobDate === TOMORROW_ISO);
+    }
+    if (activeFilters.includes("wage-1500")) {
+      transformed = transformed.filter(j => j.maxWage >= 1500);
+    }
+    if (activeFilters.includes("wage-1200")) {
+      transformed = transformed.filter(j => j.maxWage >= 1200);
+    }
+    if (activeFilters.includes("wage-1000")) {
+      transformed = transformed.filter(j => j.maxWage >= 1000);
+    }
+    if (activeFilters.includes("verified")) {
+      transformed = transformed.filter(j => j.isVerifiedEmployer);
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const searchLower = searchQuery.toLowerCase();
+      transformed = transformed.filter(j =>
+        j.jobTitle.toLowerCase().includes(searchLower) ||
+        j.category.toLowerCase().includes(searchLower) ||
+        j.area.toLowerCase().includes(searchLower) ||
+        j.city.toLowerCase().includes(searchLower) ||
+        j.venueName.toLowerCase().includes(searchLower) ||
+        (j.description && j.description.toLowerCase().includes(searchLower))
+      );
+    }
+
+    return transformed;
+  }, [baseJobs, activeFilters, searchQuery, isMockData]);
 
   // Debounce search input
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -837,75 +695,14 @@ function WorkPage() {
     if (searchDebounce.current) clearTimeout(searchDebounce.current);
     searchDebounce.current = setTimeout(() => {
       setSearchQuery(val);
-      setPage(0);
     }, 350);
   };
-
-  // Load jobs
-  const load = useCallback(
-    async (append = false) => {
-      if (!append) {
-        setLoading(true);
-        setError(null);
-      } else {
-        setLoadingMore(true);
-      }
-
-      const currentPage = append ? page + 1 : 0;
-
-      const result = await fetchJobs({
-        searchQuery,
-        activeFilters,
-        selectedCategory,
-        page: currentPage,
-      });
-
-      if (result.error) {
-        // Graceful fallback — show mock data if Supabase isn't configured
-        if (!append) {
-          setJobs(MOCK_JOBS);
-          setHasMore(false);
-          setIsMockData(true);
-          setError(null); // Don't show error UI — just show mock data silently
-        }
-      } else {
-        if (append) {
-          setJobs((prev) => [...prev, ...result.jobs]);
-          setPage(currentPage);
-        } else {
-          setJobs(result.jobs);
-          setPage(0);
-          setIsMockData(false);
-        }
-        setHasMore(result.hasMore);
-        setError(null);
-      }
-
-      setLoading(false);
-      setLoadingMore(false);
-    },
-    [searchQuery, activeFilters, selectedCategory, page],
-  );
-
-  // Reload when filters change (not on initial mount — handled below)
-  const isFirstMount = useRef(true);
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      load(false);
-      return;
-    }
-    setPage(0);
-    load(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, activeFilters, selectedCategory]);
 
   // Filter helpers
   const toggleFilter = (f: FilterId) => {
     setActiveFilters((prev) =>
       prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]
     );
-    setPage(0);
   };
 
   const clearAll = () => {
@@ -913,7 +710,6 @@ function WorkPage() {
     setSelectedCategory("All");
     setDraftSearch("");
     setSearchQuery("");
-    setPage(0);
   };
 
   const filtersActive =
@@ -921,8 +717,8 @@ function WorkPage() {
     selectedCategory !== "All" ||
     searchQuery.trim().length > 0;
 
-  const rapidJobs = useMemo(() => jobs.filter((j) => j.isRapidJob), [jobs]);
-  const normalJobs = useMemo(() => jobs.filter((j) => !j.isRapidJob), [jobs]);
+  const rapidJobs = useMemo(() => jobs.filter((j: WorkJobListing) => j.isRapidJob), [jobs]);
+  const normalJobs = useMemo(() => jobs.filter((j: WorkJobListing) => !j.isRapidJob), [jobs]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8">
@@ -932,9 +728,9 @@ function WorkPage() {
           <p className="text-sm font-semibold text-primary">Find work</p>
           <h1 className="mt-1 text-4xl sm:text-5xl">Shifts near you</h1>
           <p className="mt-3 text-muted-foreground">
-            {loading
+            {isLoading
               ? "Finding open shifts…"
-              : `${jobs.length}${hasMore ? "+" : ""} open shift${jobs.length !== 1 ? "s" : ""}${filtersActive ? " match your filters" : " today"}`}
+              : `${jobs.length} open shift${jobs.length !== 1 ? "s" : ""}${filtersActive ? " match your filters" : " today"}`}
           </p>
         </div>
         {isMockData && (
@@ -981,10 +777,7 @@ function WorkPage() {
         <button
           type="button"
           aria-pressed={selectedCategory === "All"}
-          onClick={() => {
-            setSelectedCategory("All");
-            setPage(0);
-          }}
+          onClick={() => setSelectedCategory("All")}
           className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-[1.03] ${
             selectedCategory === "All"
               ? "border-foreground bg-foreground text-background shadow-sm"
@@ -1001,7 +794,6 @@ function WorkPage() {
             aria-pressed={selectedCategory === c.id}
             onClick={() => {
               setSelectedCategory((prev) => (prev === c.id ? "All" : c.id));
-              setPage(0);
             }}
             className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200 hover:scale-[1.03] ${
               selectedCategory === c.id
@@ -1083,16 +875,16 @@ function WorkPage() {
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_296px]">
         <div>
           {/* Error */}
-          {error && (
+          {error && !isMockData && (
             <ErrorState
               title="Could not load jobs"
-              description={error}
-              onRetry={() => load(false)}
+              description={error.message}
+              onRetry={() => refetch()}
             />
           )}
 
           {/* Loading skeleton */}
-          {loading && !error && (
+          {isLoading && !error && (
             <div className="grid gap-4 sm:grid-cols-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <NewJobCardSkeleton key={i} index={i} />
@@ -1101,7 +893,7 @@ function WorkPage() {
           )}
 
           {/* Results */}
-          {!loading && !error && (
+          {!isLoading && !error && (
             <>
               {/* Rapid Jobs spotlight section */}
               {rapidJobs.length > 0 && !activeFilters.includes("rapid") && (
@@ -1127,7 +919,7 @@ function WorkPage() {
                   </div>
 
                   <div className="grid gap-5 md:grid-cols-2">
-                    {rapidJobs.map((job) => (
+                    {rapidJobs.map((job: WorkJobListing) => (
                       <RapidJobSpotlightCard
                         key={job.id}
                         id={job.id}
@@ -1157,7 +949,7 @@ function WorkPage() {
                   )}
                   <div className="grid gap-4 sm:grid-cols-2">
                     {(activeFilters.includes("rapid") ? jobs : normalJobs).map(
-                      (job, i) => (
+                      (job: WorkJobListing, i: number) => (
                         <JobCard key={job.id} job={job} index={i} />
                       )
                     )}
@@ -1183,31 +975,6 @@ function WorkPage() {
                   variant="muted"
                 />
               )}
-
-              {/* Load more */}
-              {hasMore && (
-                <div className="mt-8 flex justify-center">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => load(true)}
-                    disabled={loadingMore}
-                    id="load-more-btn"
-                  >
-                    {loadingMore ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" />
-                        Loading…
-                      </>
-                    ) : (
-                      <>
-                        Load more shifts
-                        <ArrowRight className="size-4" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -1228,7 +995,7 @@ function WorkPage() {
             <dl className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <dt className="text-muted-foreground">Open shifts</dt>
-                <dd className="font-bold text-primary">{jobs.length}{hasMore ? "+" : ""}</dd>
+                <dd className="font-bold text-primary">{jobs.length}</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-muted-foreground">Urgent / rapid</dt>

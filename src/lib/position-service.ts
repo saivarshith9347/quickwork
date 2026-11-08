@@ -17,7 +17,7 @@
  * └─────────────────────────────────────────────────────────┘
  */
 
-import { supabase } from "./supabase";
+import { supabase, getSupabase } from "./supabase";
 
 // ─── Result types ──────────────────────────────────────────────────────────────
 
@@ -96,8 +96,13 @@ export interface AdjustPositionsResult {
 export async function getJobPositionStats(
   jobId: string,
 ): Promise<ServiceResult<JobPositionStats>> {
+  const client = getSupabase();
+  if (!client) {
+    return { ok: false, error: "Supabase client not initialized" };
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("fn_get_job_position_stats", {
+  const { data, error } = await (client as any).rpc("fn_get_job_position_stats", {
     p_job_id: jobId,
   });
 
@@ -114,8 +119,13 @@ export async function getJobPositionStats(
 export async function getCategoryPositionStats(
   categoryId: string,
 ): Promise<ServiceResult<CategoryPositionStats>> {
+  const client = getSupabase();
+  if (!client) {
+    return { ok: false, error: "Supabase client not initialized" };
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("fn_get_category_position_stats", {
+  const { data, error } = await (client as any).rpc("fn_get_category_position_stats", {
     p_category_id: categoryId,
   });
 
@@ -144,8 +154,13 @@ export async function adjustCategoryHeadcount(
     return { ok: false, error: "new_count_must_be_at_least_1" };
   }
 
+  const client = getSupabase();
+  if (!client) {
+    return { ok: false, error: "Supabase client not initialized" };
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc(
+  const { data, error } = await (client as any).rpc(
     "employer_adjust_category_headcount",
     {
       p_category_id: categoryId,
@@ -178,8 +193,13 @@ export async function adjustCategoryHeadcount(
 export async function fillMissingPositions(
   categoryId: string,
 ): Promise<ServiceResult<number>> {
+  const client = getSupabase();
+  if (!client) {
+    return { ok: false, error: "Supabase client not initialized" };
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc(
+  const { data, error } = await (client as any).rpc(
     "fn_fill_positions_for_category",
     { p_category_id: categoryId },
   );
@@ -215,8 +235,18 @@ export function subscribeToJobPositions(
 ): PositionSubscription {
   const channelName = `job_positions:${jobId}`;
 
+  const client = getSupabase();
+  if (!client) {
+    console.warn("[position-service] Supabase not configured, skipping realtime subscription");
+    return {
+      unsubscribe: () => {
+        // No-op
+      },
+    };
+  }
+
   // 1. Supabase Realtime channel (strictly job_positions table)
-  const channel = supabase.channel(channelName);
+  const channel = client.channel(channelName);
 
   channel
     .on(
@@ -273,7 +303,9 @@ export function subscribeToJobPositions(
     unsubscribe: () => {
       try {
         void channel.unsubscribe();
-        void supabase.removeChannel(channel);
+        if (client) {
+          void client.removeChannel(channel);
+        }
       } catch (err) {
         console.warn("[Realtime] Error removing channel:", err);
       }
@@ -302,16 +334,20 @@ export function broadcastPositionUpdate(
     lock_expires_at?: string | null;
   },
 ) {
+  const client = getSupabase();
+  
   // 1. Send via Supabase Realtime broadcast
-  try {
-    const channel = supabase.channel(`job_positions:${jobId}`);
-    channel.send({
-      type: "broadcast",
-      event: "position_status_update",
-      payload,
-    });
-  } catch {
-    // Supabase client may be offline
+  if (client) {
+    try {
+      const channel = client.channel(`job_positions:${jobId}`);
+      channel.send({
+        type: "broadcast",
+        event: "position_status_update",
+        payload,
+      });
+    } catch {
+      // Supabase client may be offline
+    }
   }
 
   // 2. Send via local BroadcastChannel for instant cross-tab sync

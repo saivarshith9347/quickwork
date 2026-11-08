@@ -33,15 +33,16 @@ import { JobDetailsSkeleton } from "@/components/job-details-skeleton";
 import { ErrorState } from "@/components/error-state";
 import { RapidJobBadge, RapidJobCountdownBlock } from "@/components/rapid-job-badge";
 import { useAuth } from "@/lib/auth-context";
-import { useApplications } from "@/lib/application-model";
+import { useJob, useJobCategories, useJobPositions } from "@/lib/hooks/use-jobs";
+import { useHasWorkerApplied, useApplication } from "@/lib/hooks/use-applications";
 import { getDistanceToJob } from "@/lib/distance-utils";
 import {
   JOB_CATEGORY_LABELS,
   JOB_TYPE_LABELS,
   type JobCategoryValue,
+  type BaseJob,
+  formatLocation,
 } from "@/lib/job-types";
-import { supabase } from "@/lib/supabase";
-import { subscribeToJobPositions } from "@/lib/position-service";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -59,235 +60,7 @@ export const Route = createFileRoute("/work/$jobId")({
   component: JobDetailsPage,
 });
 
-// ─── Data types ───────────────────────────────────────────────────────────────
-
-interface WorkCategory {
-  id: string;
-  name: string;
-  wage: number;
-  requiredWorkers: number;
-  availablePositions: number;
-  bookedPositions: number;
-  description: string | null;
-  sortOrder: number;
-}
-
-interface JobDetail {
-  id: string;
-  jobTitle: string;
-  category: string;
-  description: string;
-  jobType: string;
-  venueName: string;
-  fullAddress: string;
-  area: string;
-  city: string;
-  landmark: string | null;
-  jobDate: string;
-  startTime: string;
-  endTime: string;
-  facilities: string[];
-  requirements: {
-    experience?: string;
-    skills?: string[];
-    dress_code?: string;
-    documents_required?: string;
-  } | null;
-  instructions: {
-    before_arrival?: string[];
-    during_shift?: string[];
-  } | null;
-  reportingContact: {
-    name?: string;
-    phone?: string;
-  } | null;
-  isRapidJob: boolean;
-  rapidJobExpiresAt: string | null;
-  status: string;
-  // Aggregated
-  workCategories: WorkCategory[];
-  totalPositions: number;
-  bookedPositions: number;
-  availablePositions: number;
-}
-
-// ─── Supabase fetch ───────────────────────────────────────────────────────────
-
-async function fetchJobDetail(jobId: string): Promise<{
-  job: JobDetail | null;
-  error: string | null;
-}> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
-    .from("jobs")
-    .select(
-      `
-      id, job_title, category, description, job_type,
-      venue_name, full_address, area, city, landmark,
-      job_date, start_time, end_time,
-      facilities, requirements, instructions,
-      is_rapid_job, rapid_job_expires_at, status,
-      job_categories (
-        id, name, description, required_workers, wage, sort_order,
-        job_positions ( status )
-      )
-      `,
-    )
-    .eq("id", jobId)
-    .single();
-
-  if (error) {
-    return { job: null, error: error.message };
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const row = data as any;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const workCategories: WorkCategory[] = ((row.job_categories ?? []) as any[])
-    .sort((a: any, b: any) => a.sort_order - b.sort_order)
-    .map((cat: any) => {
-      const positions = (cat.job_positions ?? []) as { status: string }[];
-      const nonCancelled = positions.filter((p) => p.status !== "CANCELLED");
-      const booked = nonCancelled.filter((p) => p.status === "BOOKED").length;
-      const available = nonCancelled.filter(
-        (p) => p.status === "AVAILABLE",
-      ).length;
-
-      return {
-        id: cat.id as string,
-        name: cat.name as string,
-        wage: cat.wage as number,
-        requiredWorkers: cat.required_workers as number,
-        availablePositions: available,
-        bookedPositions: booked,
-        description: cat.description as string | null,
-        sortOrder: cat.sort_order as number,
-      };
-    });
-
-  const totalPositions = workCategories.reduce(
-    (s, c) => s + c.requiredWorkers,
-    0,
-  );
-  const bookedPositions = workCategories.reduce(
-    (s, c) => s + c.bookedPositions,
-    0,
-  );
-  const availablePositions = workCategories.reduce(
-    (s, c) => s + c.availablePositions,
-    0,
-  );
-
-  const job: JobDetail = {
-    id: row.id,
-    jobTitle: row.job_title,
-    category: row.category,
-    description: row.description,
-    jobType: row.job_type,
-    venueName: row.venue_name,
-    fullAddress: row.full_address,
-    area: row.area,
-    city: row.city,
-    landmark: row.landmark,
-    jobDate: row.job_date,
-    startTime: (row.start_time as string).slice(0, 5),
-    endTime: (row.end_time as string).slice(0, 5),
-    facilities: (row.facilities ?? []) as string[],
-    requirements: (row.requirements as JobDetail["requirements"]) ?? null,
-    instructions: (row.instructions as JobDetail["instructions"]) ?? null,
-    reportingContact: null, // Hidden - will be fetched securely in later phase
-    isRapidJob: row.is_rapid_job as boolean,
-    rapidJobExpiresAt: row.rapid_job_expires_at as string | null,
-    status: row.status as string,
-    workCategories,
-    totalPositions,
-    bookedPositions,
-    availablePositions,
-  };
-
-  return { job, error: null };
-}
-
-// ─── Mock data fallback ───────────────────────────────────────────────────────
-
-const TODAY_ISO = new Date().toISOString().split("T")[0]!;
-
-function buildMockJobDetail(): JobDetail {
-  const now = Date.now();
-  const start = new Date(now + (47 * 60 + 32) * 1000); // 47m 32s matching example
-  const startStr = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
-  const end = new Date(now + (47 * 60 + 32 + 4 * 3600) * 1000);
-  const endStr = `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
-
-  return {
-    id: "mock-1",
-    jobTitle: "Banquet Server",
-    category: "Hospitality",
-    description:
-      "Urgent banquet server needed immediately for high-end wedding reception at Grand Sapphire Banquets. You'll be responsible for greeting guests, serving food and beverages, and clearing tables. 3 workers required immediately. High pay with surge pricing included.",
-    jobType: "one-time",
-    venueName: "Grand Sapphire Banquets",
-    fullAddress: "Plot 12, Financial District, Nanakramguda",
-    area: "Gachibowli",
-    city: "Hyderabad",
-    landmark: "Near Cyber Towers",
-    jobDate: TODAY_ISO,
-    startTime: startStr,
-    endTime: endStr,
-    facilities: ["Meals provided", "Uniform provided", "Transport"],
-    requirements: {
-      experience: "Prior banquet, event, or catering service preferred",
-      skills: ["Guest service", "Tray carrying", "Food serving"],
-      dress_code: "Black trousers, white shirt (uniform provided on-site)",
-      documents_required: "Government ID",
-    },
-    instructions: {
-      before_arrival: [
-        "Arrive 15 minutes before shift start",
-        "Report to supervisor Rajesh Kumar at the main entrance",
-        "Bring government ID",
-      ],
-      during_shift: [
-        "Follow supervisor guidance",
-        "Maintain courteous and helpful service to all guests",
-      ],
-    },
-    reportingContact: { name: "Rajesh Kumar", phone: "+91 98765 43210" },
-    isRapidJob: true,
-    rapidJobExpiresAt: start.toISOString(),
-    status: "Open",
-    workCategories: [
-      {
-        id: "cat-1",
-        name: "Food Serving",
-        wage: 1500,
-        requiredWorkers: 3,
-        availablePositions: 2,
-        bookedPositions: 1,
-        description: "Serve banquet food courses to seated guests at assigned tables.",
-        sortOrder: 1,
-      },
-      {
-        id: "cat-2",
-        name: "Liquor Serving",
-        wage: 1500,
-        requiredWorkers: 2,
-        availablePositions: 1,
-        bookedPositions: 1,
-        description: "Pour and serve beverages including wine, mocktails and spirits.",
-        sortOrder: 2,
-      },
-    ],
-    totalPositions: 5,
-    bookedPositions: 2,
-    availablePositions: 3, // 3 workers required!
-  };
-}
-
-const MOCK_JOB: JobDetail = buildMockJobDetail();
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helper functions ─────────────────────────────────────────────────────────
 
 function formatDateLabel(
   isoDate: string,
@@ -432,6 +205,17 @@ function HiringProgressBar({
 }
 
 // ─── Work category card ───────────────────────────────────────────────────────
+
+interface WorkCategory {
+  id: string;
+  name: string;
+  wage: number;
+  requiredWorkers: number;
+  availablePositions: number;
+  bookedPositions: number;
+  description: string | null;
+  sortOrder: number;
+}
 
 function CategoryCard({
   cat,
@@ -617,169 +401,99 @@ function JobDetailsPage() {
   const { jobId } = Route.useParams();
   const navigate = useNavigate();
   const { isLoggedIn, openLoginModal, user } = useAuth();
-  const { submitApplication, hasApplied, getApplicationsByWorker } =
-    useApplications();
+  const [isCutoff, setIsCutoff] = useState(false);
 
-  const [loading, setLoading] = useState(true);
-  const [job, setJob] = useState<JobDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isMock, setIsMock] = useState(false);
+  // Fetch job details using React Query
+  const { data: job, isLoading, error, refetch } = useJob(jobId);
+  const { data: categories } = useJobCategories(jobId);
+  const { data: positions } = useJobPositions(jobId);
+  
+  // Check if worker has already applied
+  const { data: applicationStatus } = useHasWorkerApplied({
+    workerId: user?.id,
+    jobId,
+  });
+  
+  const alreadyApplied = applicationStatus?.hasApplied || false;
 
-  const currentWorkerId = user?.id ?? "guest";
-  const alreadyApplied = isLoggedIn && hasApplied(currentWorkerId, jobId);
-  const myApplications = isLoggedIn
-    ? getApplicationsByWorker(currentWorkerId)
-    : [];
-  const myApplication = myApplications.find((a) => a.jobId === jobId);
-  const isConfirmed = myApplication?.status === "Confirmed";
+  // Fetch the worker's application details if applied
+  const { data: myApplication } = useApplication(applicationStatus?.applicationId, {
+    enabled: !!applicationStatus?.applicationId,
+  });
 
-  // Fetch
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
+  const isConfirmed = myApplication?.status === 'BOOKED' || myApplication?.status === 'ACCEPTED';
 
-    // For mock IDs, skip Supabase and use mock immediately
-    if (
-      jobId.startsWith("mock-") ||
-      ["1", "2", "3", "4", "5", "6", "7"].includes(jobId)
-    ) {
-      setTimeout(() => {
-        if (!cancelled) {
-          setJob({ ...MOCK_JOB, id: jobId });
-          setIsMock(true);
-          setLoading(false);
-        }
-      }, 600);
-      return () => { cancelled = true; };
-    }
-
-    fetchJobDetail(jobId).then((result) => {
-      if (cancelled) return;
-      if (result.error || !result.job) {
-        // Supabase not configured or job not found — use mock gracefully
-        setJob({ ...MOCK_JOB, id: jobId });
-        setIsMock(true);
-        setError(null);
-      } else {
-        setJob(result.job);
-        setIsMock(false);
-      }
-      setLoading(false);
-    });
-
-    return () => { cancelled = true; };
-  }, [jobId]);
-
-  // Realtime position sync to keep category availability numbers up to date
-  useEffect(() => {
-    if (!jobId) return;
-    const sub = subscribeToJobPositions(jobId, ({ newRow }) => {
-      if (!newRow) return;
-      const catId = (newRow["category_id"] as string | null) ?? null;
-      const newStatus = (newRow["status"] as string) || "";
-
-      setJob((prev) => {
-        if (!prev) return prev;
-        const updatedCats = prev.workCategories.map((c) => {
-          if (catId && c.id !== catId) return c;
-          if (newStatus === "BOOKED" && c.availablePositions > 0) {
-            return {
-              ...c,
-              availablePositions: Math.max(0, c.availablePositions - 1),
-              bookedPositions: Math.min(c.requiredWorkers, c.bookedPositions + 1),
-            };
-          }
-          if (newStatus === "AVAILABLE" && c.bookedPositions > 0) {
-            return {
-              ...c,
-              availablePositions: Math.min(c.requiredWorkers, c.availablePositions + 1),
-              bookedPositions: Math.max(0, c.bookedPositions - 1),
-            };
-          }
-          return c;
-        });
-
-        const newAvail = updatedCats.reduce((s, c) => s + c.availablePositions, 0);
-        const newBooked = updatedCats.reduce((s, c) => s + c.bookedPositions, 0);
-
-        return {
-          ...prev,
-          workCategories: updatedCats,
-          availablePositions: newAvail,
-          bookedPositions: newBooked,
-        };
-      });
-    });
-
-    return () => {
-      sub.unsubscribe();
+  // Calculate available/booked positions from categories and positions data
+  const workCategories = categories?.map(cat => {
+    const catPositions = positions?.filter(p => p.job_category_id === cat.id) || [];
+    const booked = catPositions.filter(p => p.status === 'BOOKED' || p.status === 'ACCEPTED').length;
+    const available = catPositions.filter(p => p.status === 'AVAILABLE').length;
+    
+    return {
+      id: cat.id,
+      name: cat.name,
+      wage: cat.wage,
+      requiredWorkers: cat.required_workers,
+      availablePositions: available,
+      bookedPositions: booked,
+      description: cat.description,
+      sortOrder: cat.sort_order,
     };
-  }, [jobId]);
+  }) || [];
 
   function handleApply() {
     if (!isLoggedIn) {
       openLoginModal({ type: "book-shift", payload: jobId });
       return;
     }
-    if (!job || job.availablePositions <= 0) return;
-
-    const result = submitApplication({
-      workerId: currentWorkerId,
-      jobId: jobId,
-    });
-
-    if (result.success) {
-      toast.success("Application submitted!", {
-        description: "The employer will review your application shortly.",
-      });
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      const msgs: Record<string, string> = {
-        duplicate_application: "You've already applied to this job.",
-        invalid_params: "Invalid application data. Please try again.",
-      };
-      toast.error("Cannot apply", {
-        description: result.reason
-          ? (msgs[result.reason] ?? "Something went wrong.")
-          : result.message ?? "Failed to submit. Please try again.",
-      });
-    }
+    if (!job || job.positionsRemaining <= 0) return;
+    navigate({ to: "/work/$jobId/positions", params: { jobId } });
   }
 
   // ── Loading ────────────────────────────────────────────────────────────────
-  if (loading) return <JobDetailsSkeleton />;
+  if (isLoading) return <JobDetailsSkeleton />;
 
-  // ── Job not found ──────────────────────────────────────────────────────────
-  if (!job) {
+  // ── Job not found / Error ──────────────────────────────────────────────────
+  if (error || !job) {
     return (
-      <div className="mx-auto max-w-4xl px-5 py-14 lg:px-8">
+      <div className="mx-auto max-w-5xl px-5 py-14 lg:px-8">
         <ErrorState
-          type="notFound"
-          title="Job Not Found"
-          description="This job listing doesn't exist or has been removed."
-          onRetry={() => navigate({ to: "/work" })}
+          title="Job not found"
+          description={error?.message || "This job doesn't exist or has been removed."}
+          onRetry={() => refetch()}
         />
       </div>
     );
   }
 
-  const [isCutoff, setIsCutoff] = useState(false);
-  const isFull = job.availablePositions === 0 && job.totalPositions > 0;
+  const totalPositions = job.positionsRequired;
+  const bookedPositions = job.positionsConfirmed;
+  const availablePositions = job.positionsRemaining;
+  const isFull = availablePositions === 0 && totalPositions > 0;
   const isExpired =
     job.isRapidJob &&
     (isCutoff || (job.rapidJobExpiresAt && new Date(job.rapidJobExpiresAt) < new Date()));
   const isCancelled = job.status === "Cancelled";
   const isJobClosed = isCancelled || isExpired || isCutoff;
 
-  const distanceInfo = getDistanceToJob(job.area);
-  const dateLabel = formatDateLabel(job.jobDate, job.startTime, job.endTime);
+  // Extract location fields
+  const location = typeof job.location === 'object' ? job.location : {
+    venueName: formatLocation(job.location, 'short'),
+    fullAddress: job.location,
+    area: formatLocation(job.location, 'short'),
+    city: '',
+    landmark: undefined,
+  };
+
+  const distanceInfo = getDistanceToJob(location.area);
+  const dateLabel = formatDateLabel(job.date, job.startTime, job.endTime);
   const duration = shiftDuration(job.startTime, job.endTime);
 
-  const minWage = job.workCategories.length > 0
-    ? Math.min(...job.workCategories.map((c) => c.wage))
+  const minWage = workCategories.length > 0
+    ? Math.min(...workCategories.map((c) => c.wage))
     : 0;
-  const maxWage = job.workCategories.length > 0
-    ? Math.max(...job.workCategories.map((c) => c.wage))
+  const maxWage = workCategories.length > 0
+    ? Math.max(...workCategories.map((c) => c.wage))
     : 0;
 
   const wageText =
@@ -788,8 +502,8 @@ function JobDetailsPage() {
       : `₹${minWage.toLocaleString("en-IN")} – ₹${maxWage.toLocaleString("en-IN")}`;
 
   const skills = (job.requirements?.skills ?? []) as string[];
-  const beforeArrival = (job.instructions?.before_arrival ?? []) as string[];
-  const duringShift = (job.instructions?.during_shift ?? []) as string[];
+  const beforeArrival = (job.instructions?.beforeArrival ?? []) as string[];
+  const duringShift = (job.instructions?.duringShift ?? []) as string[];
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -824,10 +538,10 @@ function JobDetailsPage() {
               {job.isRapidJob && (
                 <div className="mb-3">
                   <RapidJobBadge
-                    jobDate={job.jobDate}
+                    jobDate={job.date}
                     startTime={job.startTime}
                     endTime={job.endTime}
-                    rapidJobExpiresAt={job.rapidJobExpiresAt}
+                    rapidJobExpiresAt={job.rapidJobExpiresAt ?? null}
                     onCutoff={() => setIsCutoff(true)}
                     variant="default"
                   />
@@ -853,7 +567,7 @@ function JobDetailsPage() {
                 {job.isRapidJob && (
                   <span className="inline-flex items-center gap-1 rounded-xl border border-orange-500/40 bg-orange-500/10 px-3 py-1.5 text-sm font-bold text-orange-600 dark:text-orange-400">
                     <Users className="size-3.5" aria-hidden="true" />
-                    {job.availablePositions} worker{job.availablePositions !== 1 ? "s" : ""} required
+                    {availablePositions} worker{availablePositions !== 1 ? "s" : ""} required
                   </span>
                 )}
                 {isCancelled && (
@@ -862,19 +576,15 @@ function JobDetailsPage() {
                     Cancelled
                   </span>
                 )}
-                {isMock && (
-                  <span className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
-                    Preview
-                  </span>
-                )}
+                {/* isMock removed - not implemented in React Query version */}
               </div>
 
               {/* Quick info strip */}
               <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="size-4 shrink-0 text-orange-500" aria-hidden="true" />
-                  <strong className="text-foreground">{job.venueName}</strong>
-                  &nbsp;·&nbsp;{job.area}, {job.city}
+                  <strong className="text-foreground">{location.venueName}</strong>
+                  &nbsp;·&nbsp;{location.area}, {location.city}
                   {distanceInfo.distanceDisplay && (
                     <>
                       &nbsp;·&nbsp;
@@ -906,9 +616,9 @@ function JobDetailsPage() {
               {job.isRapidJob && !isJobClosed && (
                 <div className="mt-5 max-w-sm">
                   <RapidJobCountdownBlock
-                    jobDate={job.jobDate}
+                    jobDate={job.date}
                     startTime={job.startTime}
-                    rapidJobExpiresAt={job.rapidJobExpiresAt}
+                    rapidJobExpiresAt={job.rapidJobExpiresAt ?? null}
                     onCutoff={() => setIsCutoff(true)}
                   />
                 </div>
@@ -967,21 +677,21 @@ function JobDetailsPage() {
                 Hiring Progress
               </p>
               <HiringProgressBar
-                booked={job.bookedPositions}
-                total={job.totalPositions}
+                booked={bookedPositions}
+                total={totalPositions}
                 isRapid={job.isRapidJob}
               />
             </section>
 
             {/* Work categories */}
             <Section title="Work Categories" icon={Users} delay={120}>
-              {job.workCategories.length === 0 ? (
+              {workCategories.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No categories defined for this job.
                 </p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {job.workCategories.map((cat, i) => (
+                  {workCategories.map((cat, i) => (
                     <CategoryCard
                       key={cat.id}
                       cat={cat}
@@ -1005,8 +715,8 @@ function JobDetailsPage() {
             {/* Requirements */}
             {(job.requirements?.experience ||
               skills.length > 0 ||
-              job.requirements?.dress_code ||
-              job.requirements?.documents_required) && (
+              job.requirements?.dressCode ||
+              job.requirements?.documentsRequired) && (
               <Section title="Requirements" icon={ListChecks} delay={300}>
                 <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
                   {job.requirements?.experience && (
@@ -1035,20 +745,20 @@ function JobDetailsPage() {
                       </div>
                     </div>
                   )}
-                  {job.requirements?.dress_code && (
+                  {job.requirements?.dressCode && (
                     <div>
                       <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                         Dress Code
                       </p>
-                      <p className="mt-1.5 text-sm">{job.requirements.dress_code}</p>
+                      <p className="mt-1.5 text-sm">{job.requirements.dressCode}</p>
                     </div>
                   )}
-                  {job.requirements?.documents_required && (
+                  {job.requirements?.documentsRequired && (
                     <div>
                       <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                         Documents Required
                       </p>
-                      <p className="mt-1.5 text-sm">{job.requirements.documents_required}</p>
+                      <p className="mt-1.5 text-sm">{job.requirements.documentsRequired}</p>
                     </div>
                   )}
                 </div>
@@ -1056,10 +766,10 @@ function JobDetailsPage() {
             )}
 
             {/* Facilities */}
-            {job.facilities.length > 0 && (
+            {(job.facilities?.length ?? 0) > 0 && (
               <Section title="Facilities Provided" icon={CheckCircle2} delay={360}>
                 <div className="flex flex-wrap gap-2">
-                  {job.facilities.map((f) => (
+                  {job.facilities?.map((f) => (
                     <span
                       key={f}
                       className="inline-flex items-center gap-2 rounded-xl border border-success/40 bg-success/10 px-4 py-2 text-sm font-semibold text-success"
@@ -1149,82 +859,77 @@ function JobDetailsPage() {
             )}
 
             {/* My application status */}
-            {alreadyApplied && myApplication && (
+            {alreadyApplied && (
               <section
-                className={`animate-rise rounded-2xl border-2 p-6 ${
-                  myApplication.status === "Confirmed"
-                    ? "border-success/40 bg-success/5"
-                    : "border-primary/30 bg-primary/5"
-                }`}
+                className="animate-rise rounded-2xl border-2 p-6 border-primary/30 bg-primary/5"
                 style={{ animationDelay: "480ms", animationFillMode: "both" }}
               >
-                <h2 className="flex items-center gap-2 font-bold text-lg">
-                  {myApplication.status === "Confirmed" && (
-                    <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
-                  )}
-                  {myApplication.status === "Pending" && (
-                    <Clock className="size-5 text-primary" aria-hidden="true" />
-                  )}
-                  My Application
-                </h2>
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <CheckCircle2 className="size-5" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-lg leading-tight">
+                      {isConfirmed ? "Booking Confirmed!" : "Application Submitted"}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      Status: <span className="font-semibold text-primary">{myApplication?.status ?? "PENDING"}</span>
+                    </p>
+                  </div>
+                </div>
+
                 <div className="mt-4">
-                  {myApplication.status === "Pending" && (
-                    <>
-                      <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
-                        Under Review
-                      </p>
-                      <p className="mt-1.5 text-sm text-muted-foreground">
-                        Your application is waiting for employer review. You'll
-                        be notified once confirmed.
-                      </p>
-                    </>
-                  )}
-                  {myApplication.status === "Confirmed" && (
+                  {isConfirmed ? (
                     <>
                       <p className="text-sm font-bold text-success">Confirmed!</p>
                       <p className="mt-1.5 text-sm text-muted-foreground">
-                        Your booking is confirmed. Check the instructions above
-                        for reporting details.
+                        Your booking is confirmed. Check the instructions above for reporting details.
                       </p>
                       <Button variant="hero" size="lg" className="mt-4" asChild>
                         <Link
                           to="/booking-confirmation/$applicationId"
-                          params={{ applicationId: myApplication.id }}
+                          params={{ applicationId: myApplication?.id ?? applicationStatus?.applicationId ?? "" }}
                         >
                           <CheckCircle2 className="size-4" aria-hidden="true" />
                           View Booking Confirmation
                         </Link>
                       </Button>
                     </>
-                  )}
-                  {myApplication.status === "Waitlisted" && (
+                  ) : myApplication?.status === "REJECTED" ? (
                     <>
-                      <p className="text-sm font-bold text-primary">Waitlisted</p>
+                      <p className="text-sm font-bold text-destructive">Not Selected</p>
                       <p className="mt-1.5 text-sm text-muted-foreground">
-                        You're on the waitlist. We'll notify you if a position
-                        opens up.
+                        Unfortunately, your application was not selected for this position.
+                      </p>
+                    </>
+                  ) : myApplication?.status === "CANCELLED" ? (
+                    <>
+                      <p className="text-sm font-bold text-muted-foreground">Cancelled</p>
+                      <p className="mt-1.5 text-sm text-muted-foreground">
+                        Your application for this job was cancelled.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-bold text-primary">Application Under Review</p>
+                      <p className="mt-1.5 text-sm text-muted-foreground">
+                        Your application has been received. You will be notified once confirmed.
                       </p>
                     </>
                   )}
-                  {myApplication.status === "NotSelected" && (
-                    <>
-                      <p className="text-sm font-bold text-muted-foreground">
-                        Not Selected
-                      </p>
-                      <p className="mt-1.5 text-sm text-muted-foreground">
-                        Unfortunately, your application wasn't selected for this
-                        job.
-                      </p>
-                    </>
-                  )}
-                  {myApplication.posterNote && (
+
+                  {myApplication?.employerNote && (
                     <div className="mt-4 rounded-lg border border-border bg-card p-3">
-                      <p className="text-xs font-semibold text-muted-foreground">
-                        Employer note:
-                      </p>
-                      <p className="mt-1 text-sm">{myApplication.posterNote}</p>
+                      <p className="text-xs font-semibold text-muted-foreground">Employer note:</p>
+                      <p className="mt-1 text-sm">{myApplication.employerNote}</p>
                     </div>
                   )}
+
+                  <div className="mt-4">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/my-applications">View All My Applications</Link>
+                    </Button>
+                  </div>
                 </div>
               </section>
             )}
@@ -1249,11 +954,11 @@ function JobDetailsPage() {
                 <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
                   <MapPin className="size-4 mt-0.5 shrink-0 text-primary" aria-hidden="true" />
                   <div>
-                    <p className="font-medium text-foreground">{job.venueName}</p>
-                    <p>{job.fullAddress}</p>
-                    <p>{job.city}</p>
-                    {job.landmark && (
-                      <p className="mt-1 text-xs">Near {job.landmark}</p>
+                    <p className="font-medium text-foreground">{location.venueName}</p>
+                    <p>{location.fullAddress}</p>
+                    <p>{location.city}</p>
+                    {location.landmark && (
+                      <p className="mt-1 text-xs">Near {location.landmark}</p>
                     )}
                   </div>
                 </div>
@@ -1288,7 +993,7 @@ function JobDetailsPage() {
               <p className="text-xs text-muted-foreground">
                 {isFull
                   ? "All positions filled"
-                  : `${job.availablePositions} position${job.availablePositions !== 1 ? "s" : ""} available`}
+                  : `${availablePositions} position${availablePositions !== 1 ? "s" : ""} available`}
               </p>
             </div>
             <CtaButton
@@ -1318,7 +1023,7 @@ function BookingPanel({
   isLoggedIn,
   onApply,
 }: {
-  job: JobDetail;
+  job: BaseJob;
   wageText: string;
   isFull: boolean;
   isJobClosed: boolean;
@@ -1355,15 +1060,15 @@ function BookingPanel({
           className={`mt-1 text-lg font-bold ${
             isFull
               ? "text-muted-foreground"
-              : job.availablePositions <= 3
+              : job.positionsRemaining <= 3
                 ? "text-orange-600 dark:text-orange-400"
                 : "text-success"
           }`}
         >
-          {isFull ? "All positions filled" : `${job.availablePositions} open`}
+          {isFull ? "All positions filled" : `${job.positionsRemaining} open`}
         </p>
         <p className="text-xs text-muted-foreground">
-          {job.bookedPositions} / {job.totalPositions} confirmed
+          {job.positionsConfirmed} / {job.positionsRequired} confirmed
         </p>
       </div>
 
@@ -1409,7 +1114,7 @@ function CtaButton({
   onApply,
   className = "",
 }: {
-  job: JobDetail;
+  job: BaseJob;
   isFull: boolean;
   isJobClosed: boolean;
   alreadyApplied: boolean;

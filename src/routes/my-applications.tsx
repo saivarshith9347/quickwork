@@ -3,13 +3,15 @@
  */
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Clock, CheckCircle2, XCircle, Users, Briefcase, ArrowLeft } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, Users, Briefcase, ArrowLeft, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ApplicationCard } from "@/components/application-card";
 import { useAuth } from "@/lib/auth-context";
-import { useApplications, type ApplicationStatusValue } from "@/lib/application-model";
+import { useWorkerApplications } from "@/lib/hooks/use-applications";
+import type { ApplicationStatus } from "@/lib/services/application-service";
+import { ErrorState } from "@/components/error-state";
 
 export const Route = createFileRoute("/my-applications")({
   head: () => ({
@@ -31,12 +33,17 @@ export const Route = createFileRoute("/my-applications")({
 
 function MyApplicationsPage() {
   const { user, isLoggedIn, openLoginModal } = useAuth();
-  const { getApplicationsByWorker } = useApplications();
   
-  const [filter, setFilter] = useState<'all' | ApplicationStatusValue>('all');
+  const [filter, setFilter] = useState<'all' | ApplicationStatus>('all');
+
+  // Fetch applications using React Query (always called at top level before early returns)
+  const { data: allApplications, isLoading, error, refetch } = useWorkerApplications(
+    { workerId: user?.id },
+    { enabled: !!user?.id && isLoggedIn }
+  );
   
   // Redirect if not logged in
-  if (!isLoggedIn) {
+  if (!isLoggedIn || !user) {
     return (
       <div className="mx-auto max-w-3xl px-5 py-14 lg:px-8">
         <div className="rounded-2xl border border-border bg-surface p-12 text-center">
@@ -60,20 +67,17 @@ function MyApplicationsPage() {
     );
   }
   
-  const currentWorkerId = user?.id || 'guest';
-  const allApplications = getApplicationsByWorker(currentWorkerId);
-  
   const filteredApplications = filter === 'all'
-    ? allApplications
-    : allApplications.filter(app => app.status === filter);
+    ? (allApplications || [])
+    : (allApplications || []).filter(app => app.status === filter);
   
   // Count by status
   const counts = {
-    all: allApplications.length,
-    Pending: allApplications.filter(a => a.status === 'Pending').length,
-    Confirmed: allApplications.filter(a => a.status === 'Confirmed').length,
-    Waitlisted: allApplications.filter(a => a.status === 'Waitlisted').length,
-    NotSelected: allApplications.filter(a => a.status === 'NotSelected').length,
+    all: allApplications?.length || 0,
+    PENDING: allApplications?.filter(a => a.status === 'PENDING').length || 0,
+    BOOKED: allApplications?.filter(a => a.status === 'BOOKED' || a.status === 'ACCEPTED').length || 0,
+    CANCELLED: allApplications?.filter(a => a.status === 'CANCELLED').length || 0,
+    REJECTED: allApplications?.filter(a => a.status === 'REJECTED').length || 0,
   };
   
   return (
@@ -108,27 +112,27 @@ function MyApplicationsPage() {
         />
         <StatCard
           label="Pending"
-          value={counts.Pending}
+          value={counts.PENDING}
           icon={Clock}
           color="text-amber-600"
-          isActive={filter === 'Pending'}
-          onClick={() => setFilter('Pending')}
+          isActive={filter === 'PENDING'}
+          onClick={() => setFilter('PENDING')}
         />
         <StatCard
-          label="Confirmed"
-          value={counts.Confirmed}
+          label="Booked"
+          value={counts.BOOKED}
           icon={CheckCircle2}
           color="text-success"
-          isActive={filter === 'Confirmed'}
-          onClick={() => setFilter('Confirmed')}
+          isActive={filter === 'BOOKED'}
+          onClick={() => setFilter('BOOKED')}
         />
         <StatCard
-          label="Waitlisted"
-          value={counts.Waitlisted}
-          icon={Users}
-          color="text-primary"
-          isActive={filter === 'Waitlisted'}
-          onClick={() => setFilter('Waitlisted')}
+          label="Cancelled"
+          value={counts.CANCELLED}
+          icon={XCircle}
+          color="text-destructive"
+          isActive={filter === 'CANCELLED'}
+          onClick={() => setFilter('CANCELLED')}
         />
       </div>
       
@@ -140,45 +144,63 @@ function MyApplicationsPage() {
           label={`All (${counts.all})`}
         />
         <TabButton
-          active={filter === 'Pending'}
-          onClick={() => setFilter('Pending')}
-          label={`Pending (${counts.Pending})`}
+          active={filter === 'PENDING'}
+          onClick={() => setFilter('PENDING')}
+          label={`Pending (${counts.PENDING})`}
         />
         <TabButton
-          active={filter === 'Confirmed'}
-          onClick={() => setFilter('Confirmed')}
-          label={`Confirmed (${counts.Confirmed})`}
+          active={filter === 'BOOKED'}
+          onClick={() => setFilter('BOOKED')}
+          label={`Booked (${counts.BOOKED})`}
         />
         <TabButton
-          active={filter === 'Waitlisted'}
-          onClick={() => setFilter('Waitlisted')}
-          label={`Waitlisted (${counts.Waitlisted})`}
+          active={filter === 'CANCELLED'}
+          onClick={() => setFilter('CANCELLED')}
+          label={`Cancelled (${counts.CANCELLED})`}
         />
         <TabButton
-          active={filter === 'NotSelected'}
-          onClick={() => setFilter('NotSelected')}
-          label={`Not Selected (${counts.NotSelected})`}
+          active={filter === 'REJECTED'}
+          onClick={() => setFilter('REJECTED')}
+          label={`Rejected (${counts.REJECTED})`}
         />
       </div>
+      
+      {/* Loading state */}
+      {isLoading && (
+        <div className="mt-8 flex justify-center py-12">
+          <Loader2 className="size-8 animate-spin text-primary" />
+        </div>
+      )}
+      
+      {/* Error state */}
+      {error && !isLoading && (
+        <ErrorState
+          title="Could not load applications"
+          description={error.message}
+          onRetry={() => refetch()}
+        />
+      )}
       
       {/* Applications List */}
-      <div className="mt-8 space-y-4">
-        {filteredApplications.length === 0 ? (
-          <EmptyState filter={filter} />
-        ) : (
-          filteredApplications.map((application) => (
-            <ApplicationCard
-              key={application.id}
-              application={application}
-              viewMode="worker"
-              showActions={false}
-            />
-          ))
-        )}
-      </div>
+      {!isLoading && !error && (
+        <div className="mt-8 space-y-4">
+          {filteredApplications.length === 0 ? (
+            <EmptyState filter={filter === 'all' ? 'all' : filter} />
+          ) : (
+            filteredApplications.map((application) => (
+              <ApplicationCard
+                key={application.id}
+                application={application}
+                viewMode="worker"
+                showActions={false}
+              />
+            ))
+          )}
+        </div>
+      )}
       
       {/* Call to Action */}
-      {allApplications.length > 0 && (
+      {!isLoading && allApplications && allApplications.length > 0 && (
         <div className="mt-12 rounded-2xl border border-border bg-surface p-8 text-center">
           <h3 className="text-xl font-semibold">Keep Applying!</h3>
           <p className="mt-2 text-sm text-muted-foreground">

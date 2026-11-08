@@ -5,7 +5,8 @@
  * Only notifies workers who match specific criteria to avoid spam.
  */
 
-import type { BaseJob } from "./job-types";
+import type { BaseJob, JobLocationValue } from "./job-types";
+import { isStructuredLocation, getLocationArea } from "./job-types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -291,7 +292,7 @@ function formatStartTime(jobDate: string, startTime: string): string {
 /**
  * Check if a worker is eligible to receive notification for a job
  */
-function isWorkerEligible(worker: WorkerProfile, job: Job, distance: number): boolean {
+function isWorkerEligible(worker: WorkerProfile, job: BaseJob, distance: number): boolean {
   // 1. Must have rapid job alerts enabled
   if (!worker.notificationPreferences.rapidJobAlerts) {
     return false;
@@ -364,7 +365,7 @@ function calculateWorkerPriority(
 /**
  * Find all eligible workers for a Rapid Job
  */
-export function findEligibleWorkers(job: Job): Array<{
+export function findEligibleWorkers(job: BaseJob): Array<{
   worker: WorkerProfile;
   distance: number;
   priority: number;
@@ -376,8 +377,9 @@ export function findEligibleWorkers(job: Job): Array<{
   }> = [];
 
   // Parse job location (in real app, would be lat/lng from venue)
-  // For now, using mock coordinates based on area
-  const jobLocation = getJobLocationCoordinates(job.area);
+  // Get area from location structure
+  const jobArea = getLocationArea(job.location);
+  const jobLocation = getJobLocationCoordinates(jobArea);
 
   for (const worker of mockWorkerProfiles) {
     const distance = calculateDistance(
@@ -424,7 +426,7 @@ function getJobLocationCoordinates(area: string): { lat: number; lng: number } {
  */
 async function sendPushNotification(
   worker: WorkerProfile,
-  job: Job,
+  job: BaseJob,
   distance: number,
   isReminder: boolean = false
 ): Promise<boolean> {
@@ -434,18 +436,18 @@ async function sendPushNotification(
         ? `⏰ Reminder: ${job.jobTitle} Still Available`
         : `⚡ Rapid Job Alert: ${job.jobTitle}`,
       body: isReminder
-        ? `Still need ${job.positionsRemaining || job.positionsTotal} workers • ${job.wageDisplay} • ${distance} km away`
-        : `${job.positionsTotal} positions • ${job.wageDisplay} • ${distance} km away`,
+        ? `Still need ${job.positionsRemaining} workers • ₹${job.wage} • ${distance} km away`
+        : `${job.positionsRequired} positions • ₹${job.wage} • ${distance} km away`,
       data: {
         jobId: job.id,
         jobTitle: job.jobTitle,
         category: job.category,
-        positionsNeeded: (job.positionsRemaining || job.positionsTotal).toString(),
+        positionsNeeded: job.positionsRemaining.toString(),
         startTime: formatStartTime(job.date, job.startTime),
-        wage: job.wageDisplay,
+        wage: `₹${job.wage}`,
         distance: `${distance} km`,
-        venueName: job.venueName,
-        area: job.area,
+        venueName: isStructuredLocation(job.location) ? job.location.venueName : 'Venue',
+        area: getLocationArea(job.location),
         type: isReminder ? "rapid_job_reminder" : "rapid_job",
         isReminder: isReminder.toString(),
       },
@@ -471,7 +473,7 @@ async function sendPushNotification(
  * Main function: Notify eligible workers about a Rapid Job
  */
 export async function notifyEligibleWorkers(
-  job: Job,
+  job: BaseJob,
   isReminder: boolean = false
 ): Promise<{
   totalNotified: number;
@@ -500,13 +502,13 @@ export async function notifyEligibleWorkers(
     );
 
     console.log(`\n⏰ REMINDER NOTIFICATION for: ${job.jobTitle}`);
-    console.log(`📍 Location: ${job.venueName}, ${job.area}`);
+    console.log(`📍 Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`);
     console.log(`👥 Original eligible: ${eligible.length} workers`);
     console.log(`🚫 Already responded: ${respondedWorkers.size} workers`);
     console.log(`✅ To notify: ${workersToNotify.length} workers\n`);
   } else {
     console.log(`\n🚀 Processing Rapid Job: ${job.jobTitle}`);
-    console.log(`📍 Location: ${job.venueName}, ${job.area}`);
+    console.log(`📍 Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`);
     console.log(`👥 Found ${eligible.length} eligible workers\n`);
   }
 
@@ -521,11 +523,11 @@ export async function notifyEligibleWorkers(
       workerId: worker.id,
       jobId: job.id,
       jobTitle: job.jobTitle,
-      positionsNeeded: job.positionsRemaining || job.positionsTotal,
+      positionsNeeded: job.positionsRemaining,
       startTime: formatStartTime(job.date, job.startTime),
-      wage: job.wageDisplay,
+      wage: `₹${job.wage}`,
       distance: `${distance} km`,
-      venueName: job.venueName,
+      venueName: isStructuredLocation(job.location) ? job.location.venueName : 'Venue',
       category: job.category,
       sentAt: new Date(),
       status: success ? "sent" : "failed",
@@ -574,7 +576,7 @@ export function getNotificationStats(jobId: string): {
  * Automatically sends after REMINDER_DELAY_MS if job is still unfilled
  */
 export function scheduleReminderNotification(
-  job: Job,
+  job: BaseJob,
   getCurrentJobStatus: () => {
     positionsRemaining: number;
     isCancelled: boolean;
@@ -666,7 +668,7 @@ export function getActiveReminders(): string[] {
 /**
  * Test function to simulate notification system
  */
-export function testRapidJobNotifications(job: Job): void {
+export function testRapidJobNotifications(job: BaseJob): void {
   console.log("\n" + "=".repeat(60));
   console.log("🧪 TESTING RAPID JOB NOTIFICATION SYSTEM");
   console.log("=".repeat(60));
@@ -676,9 +678,9 @@ export function testRapidJobNotifications(job: Job): void {
   console.log(`\n📋 Job Details:`);
   console.log(`   Title: ${job.jobTitle}`);
   console.log(`   Category: ${job.category}`);
-  console.log(`   Location: ${job.venueName}, ${job.area}`);
-  console.log(`   Positions: ${job.positionsTotal}`);
-  console.log(`   Wage: ${job.wageDisplay}`);
+  console.log(`   Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`);
+  console.log(`   Positions: ${job.positionsRequired}`);
+  console.log(`   Wage: ₹${job.wage}`);
   console.log(`   Is Rapid: ${job.isRapidJob ? "✅ Yes" : "❌ No"}`);
 
   console.log(`\n📊 Worker Screening Results:`);

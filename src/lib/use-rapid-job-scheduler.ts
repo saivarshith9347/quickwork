@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { createRapidJobScheduler, type RapidJobScheduler } from "./rapid-job-scheduler";
+import { createRapidJobScheduler, type RapidJobScheduler, type RapidJobSchedulerConfig } from "./rapid-job-scheduler";
 import type { BaseJob } from "./job-types";
 
 interface UseRapidJobSchedulerOptions {
@@ -67,13 +67,15 @@ export function useRapidJobScheduler(options: UseRapidJobSchedulerOptions = {}) 
   } = options;
 
   useEffect(() => {
-    // Create scheduler instance
-    schedulerRef.current = createRapidJobScheduler({
+    // Create scheduler instance with proper config handling
+    const config: RapidJobSchedulerConfig = {
       checkInterval: checkInterval ?? 30000,
-      onUpdate,
-      onLog,
-      ...(getJobs !== undefined && { getJobs }),
-    });
+    };
+    
+    if (onUpdate) config.onUpdate = onUpdate;
+    if (onLog) config.onLog = onLog;
+    
+    schedulerRef.current = createRapidJobScheduler(config);
 
     // Start if autoStart is enabled
     if (autoStart) {

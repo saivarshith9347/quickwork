@@ -128,11 +128,29 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Prefer working locally? You need Node.js 18+ and npm.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+# 1. Install dependencies
+npm install
+
+# 2. Configure environment
+# Copy .env.local.example to .env.local and set your Supabase credentials:
+# VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+# VITE_SUPABASE_ANON_KEY=eyJ...
+
+# 3. Apply database migrations
+npm run db:push
+
+# 4. Start local development server
 npm run dev
+
+# 5. Typecheck & build
+npm run typecheck
+npm run build
 ```
+
+### Authentication Providers
+- **Email OTP**: Works out of the box with Supabase Auth.
+- **Phone OTP**: Configure an SMS provider (e.g. Twilio) under *Supabase Dashboard -> Authentication -> Providers -> Phone*.
+- **Google OAuth**: Add your Google Client ID & Secret under *Supabase Dashboard -> Authentication -> Providers -> Google*.

@@ -13,20 +13,37 @@
  *   - Set in Vercel as "Server" environment variable (not "Browser").
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
-export function createServerSupabaseClient() {
+// Track whether server credentials are configured
+export const isServerSupabaseConfigured = !!(
+  process.env["SUPABASE_URL"] && 
+  process.env["SUPABASE_SERVICE_ROLE_KEY"]
+);
+
+/**
+ * Create a Supabase server client with service role key.
+ * 
+ * @param throwOnMissing - If true, throws error when credentials missing. Default: true for server context.
+ * @returns Supabase client or null if not configured and throwOnMissing is false
+ */
+export function createServerSupabaseClient(
+  throwOnMissing = true
+): SupabaseClient<Database> | null {
   const url = process.env["SUPABASE_URL"];
   const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 
   if (!url || !serviceRoleKey) {
-    throw new Error(
-      "[QuickWork Server] Missing Supabase server environment variables.\n" +
-        "Set (WITHOUT VITE_ prefix):\n" +
-        "  SUPABASE_URL=https://<project-ref>.supabase.co\n" +
-        "  SUPABASE_SERVICE_ROLE_KEY=eyJ...",
-    );
+    if (throwOnMissing) {
+      throw new Error(
+        "[QuickWork Server] Missing Supabase server environment variables.\n" +
+          "Set (WITHOUT VITE_ prefix):\n" +
+          "  SUPABASE_URL=https://<project-ref>.supabase.co\n" +
+          "  SUPABASE_SERVICE_ROLE_KEY=eyJ...",
+      );
+    }
+    return null;
   }
 
   return createClient<Database>(url, serviceRoleKey, {

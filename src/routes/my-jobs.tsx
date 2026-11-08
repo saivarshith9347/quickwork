@@ -40,12 +40,15 @@ import {
   BadgeCheck,
   AlertCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
+import { ApplicationService } from "@/lib/services/application-service";
+import { formatLocation } from "@/lib/job-types";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -241,6 +244,9 @@ function buildMockData(): JobRow[] {
 // ─── Supabase data fetching ────────────────────────────────────────────────────
 
 async function fetchEmployerJobs(employerId: string): Promise<JobRow[]> {
+  const supabase = getSupabase();
+  if (!supabase) return buildMockData();
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: jobs, error } = await (supabase as any)
@@ -458,12 +464,8 @@ function ApplicantRow({
   async function handleAccept() {
     setActing(true);
     if (!isMock) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from("applications")
-        .update({ status: "ACCEPTED", confirmed_at: new Date().toISOString() })
-        .eq("id", app.id);
-      if (error) { toast.error("Failed to accept application"); setActing(false); return; }
+      const res = await ApplicationService.updateApplicationStatus(app.id, "ACCEPTED");
+      if (!res.success) { toast.error("Failed to accept application"); setActing(false); return; }
     } else {
       await new Promise((r) => setTimeout(r, 400));
     }
@@ -475,12 +477,8 @@ function ApplicantRow({
   async function handleReject() {
     setActing(true);
     if (!isMock) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from("applications")
-        .update({ status: "REJECTED" })
-        .eq("id", app.id);
-      if (error) { toast.error("Failed to reject application"); setActing(false); return; }
+      const res = await ApplicationService.updateApplicationStatus(app.id, "REJECTED");
+      if (!res.success) { toast.error("Failed to reject application"); setActing(false); return; }
     } else {
       await new Promise((r) => setTimeout(r, 400));
     }
@@ -876,51 +874,32 @@ function matchesTab(job: JobRow, tab: TabFilter): boolean {
 function MyJobsPage() {
   const { user, isLoggedIn, openLoginModal } = useAuth();
 
-  const [jobs, setJobs] = useState<JobRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isMock, setIsMock] = useState(false);
   const [tab, setTab] = useState<TabFilter>("All");
   const tabsRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
-  // ── Data load ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      const employerId = user?.id ?? "mock-employer";
-      const data = await fetchEmployerJobs(employerId);
-      if (!cancelled) {
-        // Detect mock by checking the first job id
-        setIsMock(!user?.id || data[0]?.id?.startsWith("mock-") === true);
-        setJobs(data);
-        setLoading(false);
-      }
-    }
-    if (isLoggedIn || !isLoggedIn) load(); // Always load (shows mock for not-logged-in)
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  const isMock = !user?.id;
+
+  // Fetch employer's full jobs data (including categories, positions, and applicants) using React Query
+  const { data: employerJobs, isLoading: loading, error, refetch } = useQuery<JobRow[], Error>({
+    queryKey: ["employer-jobs", user?.id || ""],
+    queryFn: async () => {
+      if (!user?.id) return buildMockData();
+      return fetchEmployerJobs(user.id);
+    },
+    enabled: !!user?.id,
+  });
+
+  const jobs = employerJobs ?? (isMock ? buildMockData() : []);
 
   // ── Optimistic application status update ──────────────────────────────────
   const handleAppUpdate = useCallback(
     (jobId: string, _catId: string, appId: string, status: AppStatus) => {
-      setJobs((prev) =>
-        prev.map((j) =>
-          j.id !== jobId
-            ? j
-            : {
-                ...j,
-                categories: j.categories.map((cat) => ({
-                  ...cat,
-                  applicants: cat.applicants.map((a) =>
-                    a.id === appId ? { ...a, status } : a,
-                  ),
-                })),
-              },
-        ),
-      );
+      queryClient.invalidateQueries({ queryKey: ["employer-jobs"] });
+      refetch();
+      toast.success("Application status updated");
     },
-    [],
+    [queryClient, refetch],
   );
 
   // ── Login gate ─────────────────────────────────────────────────────────────
@@ -947,7 +926,13 @@ function MyJobsPage() {
   ) as Record<TabFilter, number>;
 
   const totalPending = jobs.reduce(
-    (s, j) => s + j.categories.reduce((cs, c) => cs + c.applicants.filter((a) => a.status === "PENDING").length, 0),
+    (s: number, j: JobRow) =>
+      s +
+      (j.categories?.reduce(
+        (cs: number, c: CategoryRow) =>
+          cs + (c.applicants?.filter((a: ApplicantRow) => a.status === "PENDING").length ?? 0),
+        0,
+      ) ?? 0),
     0,
   );
 
@@ -980,10 +965,7 @@ function MyJobsPage() {
                 variant="outline"
                 size="sm"
                 onClick={async () => {
-                  setLoading(true);
-                  const data = await fetchEmployerJobs(user?.id ?? "mock");
-                  setJobs(data);
-                  setLoading(false);
+                  await refetch();
                   toast.success("Refreshed");
                 }}
               >

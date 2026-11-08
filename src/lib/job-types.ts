@@ -109,6 +109,9 @@ export interface JobRequirements {
   
   /** Required documents (e.g., ["Government ID", "Bank details", "Police verification"]) */
   documentsRequired?: string[] | undefined;
+
+  /** Category-specific notes or requirements */
+  notes?: string | undefined;
 }
 
 /**
@@ -134,6 +137,9 @@ export interface ReportingContact {
   
   /** Where to report (e.g., "Main entrance", "Back office", "Security desk") */
   location: string;
+
+  /** Contact phone number (optional) */
+  phone?: string | undefined;
 }
 
 // ─── Core Job Interface ───────────────────────────────────────────────────────

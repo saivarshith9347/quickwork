@@ -49,13 +49,9 @@ import {
   calculateDuration,
   calculateRapidJobExpiry,
 } from "@/lib/job-types";
-import { notifyEligibleWorkers, scheduleReminderNotification } from "@/lib/rapid-job-notifications";
-import { supabase } from "@/lib/supabase";
-import type { Database } from "@/lib/database.types";
 import { useAuth } from "@/lib/auth-context";
-
-type JobInsert = Database["public"]["Tables"]["jobs"]["Insert"];
-type JobCategoryInsert = Database["public"]["Tables"]["job_categories"]["Insert"];
+import { useCreateJob } from "@/lib/hooks/use-jobs";
+import { useNavigate } from "@tanstack/react-router";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -563,11 +559,12 @@ function CategoryEditor({ draft, onChange, onSave, onCancel, isEditing }: Catego
 
 function PostJobPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const createJob = useCreateJob();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState<"fwd" | "back">("fwd");
   const [form, setForm] = useState<Form>(INITIAL_FORM);
   const [published, setPublished] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   // Category editor state
   const [editorOpen, setEditorOpen] = useState(false);
@@ -701,94 +698,67 @@ function PostJobPage() {
   // ── Submit to Supabase ──────────────────────────────────────────────────────
 
   async function handleSubmit() {
-    setSubmitting(true);
+    if (!user?.id) {
+      toast.error("Please log in to post a job");
+      return;
+    }
+
     try {
-      const employerId = user?.id;
-
-      if (!employerId) {
-        // No Supabase user yet — fall back gracefully (mock env)
-        await new Promise((r) => setTimeout(r, 1200));
-        toast.success("Job posted!", { description: "Workers will be notified shortly." });
-        setPublished(true);
-        return;
-      }
-
-      // 1. Insert job row
-      const jobPayload: JobInsert = {
-        employer_id: employerId,
-        job_title: form.title,
-        category: form.category,
-        description: form.description,
-        job_type: form.jobType,
-        venue_name: form.venueName,
-        full_address: form.fullAddress,
-        area: form.area,
-        city: form.city,
-        landmark: form.landmark || null,
-        job_date: form.date,
-        start_time: form.startTime,
-        end_time: form.endTime,
-        facilities: form.facilities,
-        requirements: {
-          experience: form.experience || null,
-          skills: form.skills.length > 0 ? form.skills : null,
-          dress_code: form.dressCode || null,
-          documents_required: form.documentsRequired || null,
-          languages: form.languages || null,
+      const jobId = await createJob.mutateAsync({
+        job: {
+          employerId: user.id,
+          jobTitle: form.title,
+          category: form.category as any,
+          description: form.description,
+          location: {
+            venueName: form.venueName,
+            fullAddress: form.fullAddress,
+            area: form.area,
+            city: form.city,
+            landmark: form.landmark || undefined,
+          },
+          date: form.date,
+          startTime: form.startTime,
+          endTime: form.endTime,
+          jobType: form.jobType as any,
+          isRapidJob: form.isRapidJob,
+          rapidJobExpiresAt: form.isRapidJob
+            ? calculateRapidJobExpiry(parseInt(form.rapidJobHours))
+            : undefined,
+          facilities: form.facilities.length > 0 ? form.facilities : undefined,
+          requirements: {
+            experience: form.experience || undefined,
+            skills: form.skills.length > 0 ? form.skills : undefined,
+            dressCode: form.dressCode || undefined,
+            documentsRequired: form.documentsRequired ? [form.documentsRequired] : undefined,
+            languages: form.languages ? [form.languages] : undefined,
+          },
+          instructions: {
+            beforeArrival: form.beforeArrivalItems.length > 0 ? form.beforeArrivalItems : undefined,
+            duringShift: form.duringShiftItems.length > 0 ? form.duringShiftItems : undefined,
+          },
         },
-        instructions: {
-          before_arrival: form.beforeArrivalItems.length > 0 ? form.beforeArrivalItems : null,
-          during_shift: form.duringShiftItems.length > 0 ? form.duringShiftItems : null,
-          notes: form.notes || null,
-        },
-        is_rapid_job: form.isRapidJob,
-        rapid_job_expires_at: form.isRapidJob
-          ? calculateRapidJobExpiry(parseInt(form.rapidJobHours))
-          : null,
-        status: "Open" as const,
-      };
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const db = supabase as any;
-
-      const { data: jobRow, error: jobErr } = await db
-        .from("jobs")
-        .insert(jobPayload)
-        .select("id")
-        .single();
-
-      if (jobErr || !jobRow) {
-        throw new Error(jobErr?.message ?? "Failed to create job");
-      }
-
-      // 2. Insert job_categories (trigger auto-creates positions)
-      const catInserts: JobCategoryInsert[] = form.workCategories.map((cat, i) => ({
-        job_id: jobRow.id,
-        name: cat.name,
-        description: cat.description || null,
-        required_workers: cat.requiredWorkers,
-        wage: cat.wage,
-        requirements: cat.requirements ? { notes: cat.requirements } : {},
-        sort_order: i,
-      }));
-
-      const { error: catErr } = await db.from("job_categories").insert(catInserts);
-
-      if (catErr) {
-        // Try to clean up the job row since categories failed
-        await db.from("jobs").delete().eq("id", jobRow.id);
-        throw new Error(catErr.message ?? "Failed to create work categories");
-      }
+        categories: form.workCategories.map(cat => ({
+          name: cat.name,
+          description: cat.description || undefined,
+          requiredWorkers: cat.requiredWorkers,
+          wage: cat.wage,
+          requirements: cat.requirements ? { notes: cat.requirements } : undefined,
+        })),
+      });
 
       toast.success("Job published!", {
         description: `${totalWorkers(form.workCategories)} positions across ${form.workCategories.length} categories are now live.`,
       });
       setPublished(true);
+      
+      // Navigate to the job after a short delay
+      setTimeout(() => {
+        navigate({ to: `/hire/${jobId}` });
+      }, 2000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       toast.error("Failed to publish job", { description: msg });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -2082,12 +2052,12 @@ function PostJobPage() {
               type="button"
               variant="hero"
               size="lg"
-              disabled={!stepValid || submitting}
+              disabled={!stepValid || createJob.isPending}
               onClick={handleSubmit}
               id="publish-job-btn"
               className={form.isRapidJob ? "urgent-button" : ""}
             >
-              {submitting ? (
+              {createJob.isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
                   Publishing…

@@ -17,6 +17,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { LoginModal } from "@/components/login-modal";
 import { useAutoRapidJobCheck } from "@/lib/use-rapid-job-scheduler";
+import { SupabaseConfigGuard } from "@/components/supabase-config-guard";
 
 
 function NotFoundComponent() {
@@ -153,18 +154,20 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <div className="flex min-h-screen flex-col">
-          <Navbar />
-          <main className="flex-1 animate-rise">
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-          </main>
-          <Footer />
-        </div>
-        <LoginModal />
-        <Toaster />
-      </AuthProvider>
+      <SupabaseConfigGuard>
+        <AuthProvider>
+          <div className="flex min-h-screen flex-col">
+            <Navbar />
+            <main className="flex-1 animate-rise">
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+            </main>
+            <Footer />
+          </div>
+          <LoginModal />
+          <Toaster />
+        </AuthProvider>
+      </SupabaseConfigGuard>
     </QueryClientProvider>
   );
 }

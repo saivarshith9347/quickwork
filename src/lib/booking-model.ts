@@ -187,6 +187,9 @@ export const useBookingStore = create<BookingStore>()(
           });
         });
         
+        // Calculate totals
+        const positionsRequired = categories.reduce((sum, cat) => sum + cat.headcount, 0);
+        
         const job: Job = {
           id: jobId,
           employerId: jobData.employerId,
@@ -199,7 +202,16 @@ export const useBookingStore = create<BookingStore>()(
           endTime: jobData.endTime,
           duration,
           jobType: jobData.jobType,
+          positionsRequired,
+          positionsConfirmed: 0,
+          positionsRemaining: positionsRequired,
+          status: 'Open',
           facilities: jobData.facilities,
+          isRapidJob: jobData.isRapidJob ?? false,
+          rapidJobExpiresAt: jobData.rapidJobExpiresAt,
+          requirements: jobData.requirements,
+          instructions: jobData.instructions,
+          reportingContact: jobData.reportingContact,
           categories,
           createdAt: now,
           updatedAt: now,
@@ -332,7 +344,7 @@ export const useBookingStore = create<BookingStore>()(
         const updatedSlots = { ...slots };
         Object.keys(updatedSlots).forEach(slotId => {
           const slot = updatedSlots[slotId];
-          if (slot.status === 'locked' && slot.lockedAt) {
+          if (slot && slot.status === 'locked' && slot.lockedAt) {
             const lockExpiry = new Date(slot.lockedAt).getTime() + LOCK_DURATION_MS;
             if (Date.now() >= lockExpiry) {
               updatedSlots[slotId] = {
@@ -442,7 +454,7 @@ export function seedMockData() {
   const { createJob } = useBookingStore.getState();
   
   // Create some sample jobs with structured locations
-  const sampleJobs = [
+  const sampleJobs: Array<Parameters<typeof createJob>[0]> = [
     {
       employerId: 'emp_1',
       jobTitle: 'Banquet Staff Needed for Wedding',
@@ -459,16 +471,21 @@ export function seedMockData() {
           longitude: 72.8697,
         },
       },
-      date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 days from now
+      date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]!, // 2 days from now
       startTime: '16:00',
       endTime: '23:00',
       jobType: 'one-time' as JobTypeValue,
+      isRapidJob: false,
       facilities: ['Meals provided', 'Uniform'],
       categories: [
         { name: 'Banquet Server', wage: 1200, headcount: 8 },
         { name: 'Kitchen Helper', wage: 950, headcount: 4 },
         { name: 'Bartender', wage: 1500, headcount: 2 },
       ],
+      positionsRequired: 14,
+      positionsConfirmed: 0,
+      positionsRemaining: 14,
+      status: 'Open' as JobStatusValue,
     },
     {
       employerId: 'emp_2',
@@ -482,15 +499,20 @@ export function seedMockData() {
         city: 'Mumbai',
         landmark: 'Near Highway Toll Plaza',
       },
-      date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // tomorrow
+      date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]!, // tomorrow
       startTime: '10:00',
       endTime: '18:00',
       jobType: 'one-time' as JobTypeValue,
+      isRapidJob: false,
       facilities: ['Meals provided', 'Transport'],
       categories: [
         { name: 'Warehouse Loader', wage: 1100, headcount: 12 },
         { name: 'Forklift Operator', wage: 1800, headcount: 3 },
       ],
+      positionsRequired: 15,
+      positionsConfirmed: 0,
+      positionsRemaining: 15,
+      status: 'Open' as JobStatusValue,
     },
   ];
   

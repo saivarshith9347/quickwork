@@ -1,6 +1,6 @@
 /**
  * Job Card Skeleton
- * 
+ *
  * Loading placeholder for job listing cards.
  * Matches the layout of the actual job card component.
  */

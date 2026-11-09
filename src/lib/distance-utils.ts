@@ -38,12 +38,7 @@ export const DEFAULT_WORKER_LOCATION: Coordinates = {
 /**
  * Calculate distance between two coordinates using the Haversine formula (km)
  */
-export function calculateDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
+export function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371; // Earth's radius in kilometers
   const toRad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -52,10 +47,7 @@ export function calculateDistance(
 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
@@ -81,9 +73,12 @@ export function getCoordinatesForArea(areaOrLocation: string): Coordinates | nul
 
   // Common aliases
   if (clean.includes("gachi")) return HYDERABAD_AREA_COORDINATES["gachibowli"] ?? null;
-  if (clean.includes("hicc") || clean.includes("konda")) return HYDERABAD_AREA_COORDINATES["kondapur"] ?? null;
-  if (clean.includes("airport") || clean.includes("novotel")) return HYDERABAD_AREA_COORDINATES["shamshabad"] ?? null;
-  if (clean.includes("phoenix") || clean.includes("mani")) return HYDERABAD_AREA_COORDINATES["manikonda"] ?? null;
+  if (clean.includes("hicc") || clean.includes("konda"))
+    return HYDERABAD_AREA_COORDINATES["kondapur"] ?? null;
+  if (clean.includes("airport") || clean.includes("novotel"))
+    return HYDERABAD_AREA_COORDINATES["shamshabad"] ?? null;
+  if (clean.includes("phoenix") || clean.includes("mani"))
+    return HYDERABAD_AREA_COORDINATES["manikonda"] ?? null;
 
   return null;
 }
@@ -106,7 +101,7 @@ export function formatDistance(km: number | null | undefined): string | null {
 export function getDistanceToJob(
   area: string,
   mapCoordinates?: { latitude: number; longitude: number } | null,
-  workerLocation: Coordinates = DEFAULT_WORKER_LOCATION
+  workerLocation: Coordinates = DEFAULT_WORKER_LOCATION,
 ): { distanceKm: number | null; distanceDisplay: string | null } {
   let targetCoords: Coordinates | null = null;
 
@@ -124,7 +119,7 @@ export function getDistanceToJob(
     workerLocation.lat,
     workerLocation.lng,
     targetCoords.lat,
-    targetCoords.lng
+    targetCoords.lng,
   );
 
   return {

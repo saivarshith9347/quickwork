@@ -127,15 +127,15 @@ export function calculateCountdownState(cutoffTimestamp: number): RapidJobCountd
  */
 export function useRapidJobCountdown(
   timing: RapidJobTimingInput,
-  onCutoff?: () => void
+  onCutoff?: () => void,
 ): RapidJobCountdownState {
   const cutoffTimestamp = useMemo(
     () => getRapidJobCutoffTimestamp(timing),
-    [timing.jobDate, timing.startTime, timing.rapidJobExpiresAt]
+    [timing.jobDate, timing.startTime, timing.rapidJobExpiresAt],
   );
 
   const [state, setState] = useState<RapidJobCountdownState>(() =>
-    calculateCountdownState(cutoffTimestamp)
+    calculateCountdownState(cutoffTimestamp),
   );
 
   useEffect(() => {

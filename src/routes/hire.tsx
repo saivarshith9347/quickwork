@@ -1,5 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, CheckCircle2, Clock, Lock, MapPin, Plus, Star, Users, Wallet, ClipboardList } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Lock,
+  MapPin,
+  Plus,
+  Star,
+  Users,
+  Wallet,
+  ClipboardList,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -129,17 +140,17 @@ const jobs: JobSummary[] = [
 function HirePage() {
   const { isLoggedIn, openLoginModal, user } = useAuth();
   const { getApplicationsForJob, getJobApplicationStats, getConfirmedCount } = useApplications();
-  
+
   const [loading, setLoading] = useState(true);
   const [picked, setPicked] = useState<string[]>(["Meals provided"]);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(jobs[0]?.id || null);
 
   // Seed mock applications on first load
   useEffect(() => {
-    const hasSeeded = sessionStorage.getItem('applications-seeded');
+    const hasSeeded = sessionStorage.getItem("applications-seeded");
     if (!hasSeeded) {
       seedMockApplications();
-      sessionStorage.setItem('applications-seeded', 'true');
+      sessionStorage.setItem("applications-seeded", "true");
     }
   }, []);
 
@@ -147,11 +158,11 @@ function HirePage() {
     const t = setTimeout(() => setLoading(false), 900);
     return () => clearTimeout(t);
   }, []);
-  
+
   // Get applications for selected job
   const selectedJobApplications = selectedJobId ? getApplicationsForJob(selectedJobId) : [];
   const selectedJobStats = selectedJobId ? getJobApplicationStats(selectedJobId) : null;
-  const selectedJob = jobs.find(j => j.id === selectedJobId);
+  const selectedJob = jobs.find((j) => j.id === selectedJobId);
 
   function handlePostShift(e: React.FormEvent) {
     e.preventDefault();
@@ -252,7 +263,9 @@ function HirePage() {
                     type="button"
                     onClick={() => setPicked((p) => (on ? p.filter((x) => x !== f) : [...p, f]))}
                     className={`rounded-lg border px-3.5 py-2 text-sm font-medium transition-all duration-200 hover:scale-[1.03] ${
-                      on ? "border-primary bg-primary/12 text-primary" : "border-border text-muted-foreground"
+                      on
+                        ? "border-primary bg-primary/12 text-primary"
+                        : "border-border text-muted-foreground"
                     }`}
                   >
                     {f}
@@ -264,9 +277,13 @@ function HirePage() {
 
           <Button type="submit" variant="hero" size="lg" className="mt-8 w-full">
             {isLoggedIn ? (
-              <><Plus /> Post shift</>
+              <>
+                <Plus /> Post shift
+              </>
             ) : (
-              <><Lock className="size-4" /> Log in to post</>
+              <>
+                <Lock className="size-4" /> Log in to post
+              </>
             )}
           </Button>
         </form>
@@ -278,7 +295,8 @@ function HirePage() {
               <h2 className="text-2xl">Applications</h2>
               {selectedJob && (
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {selectedJob.jobTitle} · {selectedJob.date} · {selectedJob.startTime} – {selectedJob.endTime}
+                  {selectedJob.jobTitle} · {selectedJob.date} · {selectedJob.startTime} –{" "}
+                  {selectedJob.endTime}
                 </p>
               )}
             </div>
@@ -289,14 +307,14 @@ function HirePage() {
               </div>
             )}
           </div>
-          
+
           {/* Job selector for multiple jobs */}
           {isLoggedIn && jobs.length > 1 && (
             <div className="mt-4">
               <Label htmlFor="job-select">Select job:</Label>
               <select
                 id="job-select"
-                value={selectedJobId || ''}
+                value={selectedJobId || ""}
                 onChange={(e) => setSelectedJobId(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
               >
@@ -308,7 +326,7 @@ function HirePage() {
               </select>
             </div>
           )}
-          
+
           {/* Application Stats */}
           {selectedJobStats && (
             <div className="mt-4 grid grid-cols-4 gap-2">
@@ -325,12 +343,14 @@ function HirePage() {
                 <p className="text-xs text-muted-foreground">Waitlist</p>
               </div>
               <div className="rounded-lg border border-border bg-card p-2 text-center">
-                <p className="text-lg font-bold text-muted-foreground">{selectedJobStats.notSelected}</p>
+                <p className="text-lg font-bold text-muted-foreground">
+                  {selectedJobStats.notSelected}
+                </p>
                 <p className="text-xs text-muted-foreground">Rejected</p>
               </div>
             </div>
           )}
-          
+
           {/* Applications List */}
           <div className="mt-7 space-y-4">
             {loading ? (
@@ -348,7 +368,12 @@ function HirePage() {
                   No applications yet for this job.
                 </p>
                 {!isLoggedIn && (
-                  <Button variant="hero" size="sm" className="mt-4" onClick={() => openLoginModal()}>
+                  <Button
+                    variant="hero"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => openLoginModal()}
+                  >
                     Log in to view applications
                   </Button>
                 )}
@@ -370,7 +395,7 @@ function HirePage() {
               ))
             )}
           </div>
-          
+
           {/* View all link */}
           {isLoggedIn && selectedJobApplications.length > 3 && (
             <Button variant="outline" size="sm" className="mt-4 w-full" asChild>
@@ -399,9 +424,12 @@ function HirePage() {
                 ))
               : jobs.map((job) => {
                   const statusColors = JOB_STATUS_COLORS[job.status];
-                  const fillPercentage = getFillPercentage(job.positionsRequired, job.positionsConfirmed);
+                  const fillPercentage = getFillPercentage(
+                    job.positionsRequired,
+                    job.positionsConfirmed,
+                  );
                   const jobStats = getJobApplicationStats(job.id);
-                  
+
                   return (
                     <article
                       key={job.id}
@@ -420,23 +448,26 @@ function HirePage() {
                           {JOB_STATUS_LABELS[job.status]}
                         </span>
                       </div>
-                      
+
                       {/* Application Stats */}
                       {jobStats.total > 0 && (
                         <div className="mt-4 flex items-center gap-2">
                           <ClipboardList className="size-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">
-                            {jobStats.total} application{jobStats.total === 1 ? '' : 's'}
+                            {jobStats.total} application{jobStats.total === 1 ? "" : "s"}
                             {jobStats.pending > 0 && (
-                              <span className="ml-1 text-amber-600">({jobStats.pending} pending)</span>
+                              <span className="ml-1 text-amber-600">
+                                ({jobStats.pending} pending)
+                              </span>
                             )}
                           </span>
                         </div>
                       )}
-                      
+
                       <div className="mt-4">
                         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Users className="size-4" /> {job.positionsConfirmed} of {job.positionsRequired} confirmed
+                          <Users className="size-4" /> {job.positionsConfirmed} of{" "}
+                          {job.positionsRequired} confirmed
                         </p>
                         {/* Progress bar */}
                         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -446,20 +477,21 @@ function HirePage() {
                           />
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {job.positionsRemaining > 0 
-                            ? `${job.positionsRemaining} position${job.positionsRemaining === 1 ? '' : 's'} remaining`
-                            : 'Fully staffed'
-                          }
+                          {job.positionsRemaining > 0
+                            ? `${job.positionsRemaining} position${job.positionsRemaining === 1 ? "" : "s"} remaining`
+                            : "Fully staffed"}
                         </p>
                       </div>
                       <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-                        <CalendarDays className="size-4" /> {job.date} · {job.startTime} – {job.endTime}
+                        <CalendarDays className="size-4" /> {job.date} · {job.startTime} –{" "}
+                        {job.endTime}
                       </p>
                       <p className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
                         <MapPin className="size-4" /> {job.area}
                       </p>
                       <p className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="size-4" /> {formatDuration(job.duration)} · {JOB_TYPE_LABELS[job.jobType]}
+                        <Clock className="size-4" /> {formatDuration(job.duration)} ·{" "}
+                        {JOB_TYPE_LABELS[job.jobType]}
                       </p>
                       <p className="mt-5 flex items-center gap-2 font-display text-xl font-bold text-primary">
                         <Wallet className="size-5" /> {job.wage}
@@ -468,7 +500,7 @@ function HirePage() {
                       <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                         Posted {job.postedAt}
                       </p>
-                      
+
                       {/* Action buttons */}
                       <div className="mt-4 flex gap-2">
                         <Button

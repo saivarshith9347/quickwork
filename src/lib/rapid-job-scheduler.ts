@@ -1,15 +1,11 @@
 /**
  * Rapid Job Scheduler
- * 
+ *
  * Automatically checks and updates rapid jobs that have expired or been filled.
  * Run this periodically (every 1-5 minutes) to keep rapid job status current.
  */
 
-import {
-  getRapidJobsNeedingUpdate,
-  type BaseJob,
-  type JobStatusValue,
-} from './job-types';
+import { getRapidJobsNeedingUpdate, type BaseJob, type JobStatusValue } from "./job-types";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -23,10 +19,10 @@ export interface RapidJobUpdate {
 export interface RapidJobSchedulerConfig {
   /** Interval in milliseconds (default: 1 minute) */
   checkInterval?: number;
-  
+
   /** Callback when rapid jobs need updates */
   onUpdate?: (updates: RapidJobUpdate[]) => void;
-  
+
   /** Callback for logging */
   onLog?: (message: string) => void;
 }
@@ -37,7 +33,7 @@ export class RapidJobScheduler {
   private intervalId: NodeJS.Timeout | null = null;
   private config: Required<RapidJobSchedulerConfig>;
   private isRunning = false;
-  
+
   constructor(config: RapidJobSchedulerConfig = {}) {
     this.config = {
       checkInterval: config.checkInterval || 60 * 1000, // 1 minute default
@@ -45,46 +41,48 @@ export class RapidJobScheduler {
       onLog: config.onLog || (() => {}),
     };
   }
-  
+
   /**
    * Start the scheduler
    */
   start() {
     if (this.isRunning) {
-      this.config.onLog('Rapid job scheduler already running');
+      this.config.onLog("Rapid job scheduler already running");
       return;
     }
-    
-    this.config.onLog(`Starting rapid job scheduler (check every ${this.config.checkInterval / 1000}s)`);
+
+    this.config.onLog(
+      `Starting rapid job scheduler (check every ${this.config.checkInterval / 1000}s)`,
+    );
     this.isRunning = true;
-    
+
     // Run immediately on start
     this.check();
-    
+
     // Then run on interval
     this.intervalId = setInterval(() => {
       this.check();
     }, this.config.checkInterval);
   }
-  
+
   /**
    * Stop the scheduler
    */
   stop() {
     if (!this.isRunning) {
-      this.config.onLog('Rapid job scheduler not running');
+      this.config.onLog("Rapid job scheduler not running");
       return;
     }
-    
+
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    
+
     this.isRunning = false;
-    this.config.onLog('Stopped rapid job scheduler');
+    this.config.onLog("Stopped rapid job scheduler");
   }
-  
+
   /**
    * Manually trigger a check (useful for testing or immediate updates)
    */
@@ -92,20 +90,20 @@ export class RapidJobScheduler {
     // If jobs not provided, would need to fetch from store/API
     // For now, this is a placeholder that requires jobs to be passed
     if (!jobs || jobs.length === 0) {
-      this.config.onLog('No jobs to check');
+      this.config.onLog("No jobs to check");
       return;
     }
-    
+
     const updates = getRapidJobsNeedingUpdate(jobs);
-    
+
     if (updates.length > 0) {
       this.config.onLog(`Found ${updates.length} rapid job(s) needing updates`);
       this.config.onUpdate(updates);
     } else {
-      this.config.onLog('No rapid job updates needed');
+      this.config.onLog("No rapid job updates needed");
     }
   }
-  
+
   /**
    * Get scheduler status
    */
@@ -124,9 +122,7 @@ export class RapidJobScheduler {
  * @param config - Scheduler configuration
  * @returns Scheduler instance
  */
-export function createRapidJobScheduler(
-  config: RapidJobSchedulerConfig = {}
-): RapidJobScheduler {
+export function createRapidJobScheduler(config: RapidJobSchedulerConfig = {}): RapidJobScheduler {
   const scheduler = new RapidJobScheduler(config);
   scheduler.start();
   return scheduler;
@@ -150,19 +146,19 @@ export function checkRapidJobsOnce(jobs: BaseJob[]): RapidJobUpdate[] {
  */
 export function applyRapidJobUpdates(
   updates: RapidJobUpdate[],
-  updateJobFn: (jobId: string, updates: { status?: JobStatusValue; hidden?: boolean }) => void
+  updateJobFn: (jobId: string, updates: { status?: JobStatusValue; hidden?: boolean }) => void,
 ) {
-  updates.forEach(update => {
+  updates.forEach((update) => {
     const jobUpdates: { status?: JobStatusValue; hidden?: boolean } = {};
-    
+
     if (update.newStatus) {
       jobUpdates.status = update.newStatus;
     }
-    
+
     if (update.shouldHide) {
       jobUpdates.hidden = true;
     }
-    
+
     updateJobFn(update.jobId, jobUpdates);
   });
 }
@@ -179,22 +175,22 @@ export function applyRapidJobUpdates(
 export function useRapidJobScheduler(
   jobs: BaseJob[],
   onUpdate: (updates: RapidJobUpdate[]) => void,
-  checkInterval: number = 60 * 1000 // 1 minute
+  checkInterval: number = 60 * 1000, // 1 minute
 ) {
   // This would typically use React hooks, but since we're in a TS file,
   // here's the pattern to implement in a component:
-  
+
   /**
    * Usage in a React component:
-   * 
+   *
    * ```tsx
    * import { useEffect, useRef } from 'react';
    * import { createRapidJobScheduler } from '@/lib/rapid-job-scheduler';
-   * 
+   *
    * function MyComponent() {
    *   const jobs = useJobStore(state => state.jobs);
    *   const schedulerRef = useRef<RapidJobScheduler | null>(null);
-   *   
+   *
    *   useEffect(() => {
    *     schedulerRef.current = createRapidJobScheduler({
    *       checkInterval: 60000,
@@ -204,12 +200,12 @@ export function useRapidJobScheduler(
    *       },
    *       onLog: (msg) => console.log('[Rapid Job Scheduler]', msg),
    *     });
-   *     
+   *
    *     return () => {
    *       schedulerRef.current?.stop();
    *     };
    *   }, []);
-   *   
+   *
    *   // Manually trigger check when jobs change
    *   useEffect(() => {
    *     schedulerRef.current?.check(jobs);
@@ -217,7 +213,7 @@ export function useRapidJobScheduler(
    * }
    * ```
    */
-  
+
   return {
     // Placeholder for actual React hook implementation
     start: () => {},
@@ -230,35 +226,35 @@ export function useRapidJobScheduler(
 
 /**
  * Example: Set up rapid job monitoring in your app
- * 
+ *
  * ```typescript
  * import { createRapidJobScheduler } from '@/lib/rapid-job-scheduler';
  * import { useJobStore } from '@/lib/job-store';
- * 
+ *
  * // In your app initialization or main component
  * const scheduler = createRapidJobScheduler({
  *   checkInterval: 60 * 1000, // Check every minute
- *   
+ *
  *   onUpdate: (updates) => {
  *     const { updateJob } = useJobStore.getState();
- *     
+ *
  *     updates.forEach(update => {
  *       console.log(`Updating rapid job ${update.jobId}: ${update.reason}`);
- *       
+ *
  *       if (update.newStatus) {
- *         updateJob(update.jobId, { 
+ *         updateJob(update.jobId, {
  *           status: update.newStatus,
- *           hidden: update.shouldHide 
+ *           hidden: update.shouldHide
  *         });
  *       }
  *     });
  *   },
- *   
+ *
  *   onLog: (message) => {
  *     console.log('[Rapid Jobs]', message);
  *   },
  * });
- * 
+ *
  * // Clean up on unmount
  * return () => scheduler.stop();
  * ```

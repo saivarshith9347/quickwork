@@ -164,7 +164,12 @@ function makeMockStats(jobId: string): JobPositionStats {
       positions: [
         { id: "p6", position_number: 1, status: "AVAILABLE", locked_until: null },
         { id: "p7", position_number: 2, status: "AVAILABLE", locked_until: null },
-        { id: "p8", position_number: 3, status: "PENDING",   locked_until: new Date(Date.now() + 90_000).toISOString() },
+        {
+          id: "p8",
+          position_number: 3,
+          status: "PENDING",
+          locked_until: new Date(Date.now() + 90_000).toISOString(),
+        },
         { id: "p9", position_number: 4, status: "AVAILABLE", locked_until: null },
       ],
     },
@@ -346,12 +351,12 @@ function PositionTile({
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         variant === "available" &&
           "border-success/50 bg-success/[0.06] text-success cursor-pointer " +
-          "hover:border-success hover:bg-success/[0.12] hover:scale-[1.05] " +
-          "hover:shadow-[0_0_18px_color-mix(in_oklab,var(--color-success)_28%,transparent)] " +
-          "active:scale-[0.98]",
+            "hover:border-success hover:bg-success/[0.12] hover:scale-[1.05] " +
+            "hover:shadow-[0_0_18px_color-mix(in_oklab,var(--color-success)_28%,transparent)] " +
+            "active:scale-[0.98]",
         variant === "selected" &&
           "border-primary bg-primary text-primary-foreground cursor-pointer " +
-          "scale-[1.05] shadow-[0_0_0_4px_color-mix(in_oklab,var(--color-primary)_25%,transparent),0_4px_20px_color-mix(in_oklab,var(--color-primary)_30%,transparent)]",
+            "scale-[1.05] shadow-[0_0_0_4px_color-mix(in_oklab,var(--color-primary)_25%,transparent),0_4px_20px_color-mix(in_oklab,var(--color-primary)_30%,transparent)]",
         variant === "pending" &&
           "border-gold/50 bg-gold/[0.08] text-gold-foreground cursor-not-allowed opacity-80",
         variant === "booked" &&
@@ -361,9 +366,7 @@ function PositionTile({
         .join(" ")}
     >
       {/* Position number */}
-      <span className="font-display text-xl font-bold leading-none tracking-tight">
-        {label}
-      </span>
+      <span className="font-display text-xl font-bold leading-none tracking-tight">{label}</span>
 
       {/* Status sublabel */}
       <span
@@ -458,9 +461,9 @@ function CategoryTab({
 function BookingLegend() {
   const items: { variant: TileVariant; label: string }[] = [
     { variant: "available", label: "Available" },
-    { variant: "selected",  label: "Selected"  },
-    { variant: "pending",   label: "On Hold"   },
-    { variant: "booked",    label: "Booked"    },
+    { variant: "selected", label: "Selected" },
+    { variant: "pending", label: "On Hold" },
+    { variant: "booked", label: "Booked" },
   ];
 
   return (
@@ -631,7 +634,9 @@ function PositionSelectionPage() {
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [jobId, requestedCatId]);
 
   // ── Supabase Realtime ──────────────────────────────────────────────────────
@@ -645,7 +650,8 @@ function PositionSelectionPage() {
       const newStatus = (newRow["status"] as PositionStatus) || "BOOKED";
       const newLock = (newRow["lock_expires_at"] as string | null) ?? null;
       const newWorkerId = (newRow["worker_id"] as string | null) ?? null;
-      const posNum = typeof newRow["position_number"] === "number" ? newRow["position_number"] : null;
+      const posNum =
+        typeof newRow["position_number"] === "number" ? newRow["position_number"] : null;
       const catId = (newRow["category_id"] as string | null) ?? null;
 
       // 1. Update position state and live counts without requiring full page refresh
@@ -656,13 +662,15 @@ function PositionSelectionPage() {
         const updatedCategories = prev.categories.map((cat) => {
           const matchesCategory = !catId || cat.category_id === catId;
           const targetPos = cat.positions.find(
-            (p) => p.id === posId || (posNum != null && p.position_number === posNum && matchesCategory),
+            (p) =>
+              p.id === posId || (posNum != null && p.position_number === posNum && matchesCategory),
           );
           if (!targetPos) return cat;
 
           changed = true;
           const updatedPositions = cat.positions.map((p) => {
-            const isMatch = p.id === posId || (posNum != null && p.position_number === posNum && matchesCategory);
+            const isMatch =
+              p.id === posId || (posNum != null && p.position_number === posNum && matchesCategory);
             if (!isMatch) return p;
             return {
               ...p,
@@ -698,11 +706,14 @@ function PositionSelectionPage() {
       if (activeSelection) {
         const isMyPos =
           activeSelection.positionId === posId ||
-          (posNum != null && activeSelection.positionNumber === posNum && (!catId || activeSelection.categoryId === catId));
+          (posNum != null &&
+            activeSelection.positionNumber === posNum &&
+            (!catId || activeSelection.categoryId === catId));
 
         if (isMyPos) {
           const isBooked = newStatus === "BOOKED";
-          const isPendingByOther = newStatus === "PENDING" && newWorkerId && newWorkerId !== myWorkerId;
+          const isPendingByOther =
+            newStatus === "PENDING" && newWorkerId && newWorkerId !== myWorkerId;
 
           if (isBooked || isPendingByOther) {
             // Automatically clear the selection
@@ -752,9 +763,7 @@ function PositionSelectionPage() {
   // ── Scroll active tab into view ────────────────────────────────────────────
   useEffect(() => {
     if (!activeCategoryId || !tabsRef.current) return;
-    const btn = tabsRef.current.querySelector<HTMLElement>(
-      `#cat-tab-${activeCategoryId}`,
-    );
+    const btn = tabsRef.current.querySelector<HTMLElement>(`#cat-tab-${activeCategoryId}`);
     btn?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [activeCategoryId]);
 
@@ -774,9 +783,7 @@ function PositionSelectionPage() {
       const effectiveWorkerId = currentWorkerId ?? "worker_demo";
       if (!stats) return;
 
-      const activeCategory = stats.categories.find(
-        (c) => c.category_id === activeCategoryId,
-      );
+      const activeCategory = stats.categories.find((c) => c.category_id === activeCategoryId);
       if (!activeCategory) return;
 
       const clickedPosition = activeCategory.positions.find((p) => p.id === positionId);
@@ -827,7 +834,8 @@ function PositionSelectionPage() {
             position_locked_by_another_worker: "This position was just reserved by another worker.",
             position_already_booked: "This position is already booked.",
             job_not_accepting: "This job is no longer accepting bookings.",
-            worker_already_has_active_application: "You already have an active application for this job.",
+            worker_already_has_active_application:
+              "You already have an active application for this job.",
           };
           toast.error("Cannot select position", {
             description: friendlyErrors[result.error ?? ""] ?? result.error ?? "Please try again.",
@@ -869,19 +877,28 @@ function PositionSelectionPage() {
             categories: prev.categories.map((cat) => ({
               ...cat,
               positions: cat.positions.map((p) =>
-                p.id === positionId
-                  ? { ...p, status: "PENDING" as PositionStatus }
-                  : p,
-            ),
-          })),
-        };
-      });
+                p.id === positionId ? { ...p, status: "PENDING" as PositionStatus } : p,
+              ),
+            })),
+          };
+        });
       }
 
       setReserving(false);
       setLostPosition(null);
     },
-    [isLoggedIn, isMock, isRapidCutoff, openLoginModal, jobId, currentWorkerId, stats, activeCategoryId, selection, wages],
+    [
+      isLoggedIn,
+      isMock,
+      isRapidCutoff,
+      openLoginModal,
+      jobId,
+      currentWorkerId,
+      stats,
+      activeCategoryId,
+      selection,
+      wages,
+    ],
   );
 
   // ── Category switch ────────────────────────────────────────────────────────
@@ -951,7 +968,6 @@ function PositionSelectionPage() {
 
   return (
     <div className="min-h-screen pb-44 lg:pb-36">
-
       {/* ── Sticky top nav ──────────────────────────────────────────────── */}
       <div className="sticky top-0 z-20 border-b border-border bg-surface/95 backdrop-blur-md">
         <div className="mx-auto max-w-4xl px-4 py-3 lg:px-8">
@@ -1014,7 +1030,9 @@ function PositionSelectionPage() {
             {/* Availability summary */}
             <div className="flex items-center divide-x divide-border rounded-xl border border-border bg-card px-1 py-1 shadow-sm">
               <div className="px-3 py-1.5 text-center">
-                <p className="font-display text-xl font-bold text-success leading-none">{totalAvailable}</p>
+                <p className="font-display text-xl font-bold text-success leading-none">
+                  {totalAvailable}
+                </p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">Open</p>
               </div>
               <div className="px-3 py-1.5 text-center">
@@ -1071,7 +1089,6 @@ function PositionSelectionPage() {
       {/* ── Main content ─────────────────────────────────────────────────── */}
       {!isJobFull && !isJobClosed && (
         <div className="mx-auto max-w-4xl px-4 py-8 lg:px-8">
-
           {/* Category tabs */}
           <div className="mb-8">
             <div className="mb-3 flex items-center justify-between gap-2">
@@ -1124,9 +1141,7 @@ function PositionSelectionPage() {
                   <span className="text-xs font-medium text-muted-foreground">Wage</span>
                   <span
                     className={`font-display text-xl font-bold ${
-                      jobMeta.isRapidJob
-                        ? "text-orange-600 dark:text-orange-400"
-                        : "text-primary"
+                      jobMeta.isRapidJob ? "text-orange-600 dark:text-orange-400" : "text-primary"
                     }`}
                   >
                     ₹{(wages[activeCategoryId!] ?? 0).toLocaleString("en-IN")}
@@ -1181,10 +1196,10 @@ function PositionSelectionPage() {
                 <div className="mt-5 flex items-start gap-3 rounded-xl border border-orange-500/35 bg-orange-500/[0.06] px-4 py-3 text-sm text-orange-700 dark:text-orange-400 animate-rise">
                   <AlertCircle className="size-4 shrink-0 mt-0.5" aria-hidden="true" />
                   <p>
-                    <strong>This position is no longer available.</strong>{" "}
-                    Another worker just reserved {lostPosition.categoryName} ·{" "}
-                    {posLabel(lostPosition.positionNumber, activeCategory.required_workers)}.
-                    Please pick a different one.
+                    <strong>This position is no longer available.</strong> Another worker just
+                    reserved {lostPosition.categoryName} ·{" "}
+                    {posLabel(lostPosition.positionNumber, activeCategory.required_workers)}. Please
+                    pick a different one.
                   </p>
                   <button
                     type="button"
@@ -1237,7 +1252,8 @@ function PositionSelectionPage() {
                   <p className="font-display text-lg font-bold leading-tight truncate">
                     {selection.categoryName}
                     <span className="ml-2 text-base font-semibold text-muted-foreground">
-                      · {posLabel(
+                      ·{" "}
+                      {posLabel(
                         selection.positionNumber,
                         stats?.categories.find((c) => c.category_id === selection.categoryId)
                           ?.required_workers ?? 99,
@@ -1246,9 +1262,7 @@ function PositionSelectionPage() {
                   </p>
                   <p
                     className={`font-display text-xl font-bold ${
-                      jobMeta?.isRapidJob
-                        ? "text-orange-600 dark:text-orange-400"
-                        : "text-primary"
+                      jobMeta?.isRapidJob ? "text-orange-600 dark:text-orange-400" : "text-primary"
                     }`}
                   >
                     ₹{selection.wage.toLocaleString("en-IN")}
@@ -1285,7 +1299,11 @@ function PositionSelectionPage() {
                   className="flex size-11 items-center justify-center rounded-xl border border-border text-muted-foreground transition-all hover:border-destructive/40 hover:bg-destructive/[0.06] hover:text-destructive disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Cancel selection"
                 >
-                  {releasing ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+                  {releasing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <X className="size-4" />
+                  )}
                 </button>
 
                 <Button

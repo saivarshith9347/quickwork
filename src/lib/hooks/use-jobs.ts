@@ -1,12 +1,12 @@
 /**
  * React Query Hooks for Job Management
- * 
+ *
  * Provides hooks for:
  * - Fetching jobs (list and single)
  * - Creating jobs
  * - Updating jobs
  * - Deleting jobs
- * 
+ *
  * Uses React Query for:
  * - Automatic caching
  * - Background refetching
@@ -14,20 +14,20 @@
  * - Loading/error states
  */
 
-import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
-import { JobService, type CreateJobParams, type GetJobsParams } from '../services/job-service';
-import type { BaseJob, JobCategoryValue, JobStatusValue, JobLocationValue } from '../job-types';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
+import { JobService, type CreateJobParams, type GetJobsParams } from "../services/job-service";
+import type { BaseJob, JobCategoryValue, JobStatusValue, JobLocationValue } from "../job-types";
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
 export const jobKeys = {
-  all: ['jobs'] as const,
-  lists: () => [...jobKeys.all, 'list'] as const,
+  all: ["jobs"] as const,
+  lists: () => [...jobKeys.all, "list"] as const,
   list: (filters: Record<string, any>) => [...jobKeys.lists(), filters] as const,
-  details: () => [...jobKeys.all, 'detail'] as const,
+  details: () => [...jobKeys.all, "detail"] as const,
   detail: (id: string) => [...jobKeys.details(), id] as const,
-  categories: (id: string) => [...jobKeys.detail(id), 'categories'] as const,
-  positions: (id: string) => [...jobKeys.detail(id), 'positions'] as const,
+  categories: (id: string) => [...jobKeys.detail(id), "categories"] as const,
+  positions: (id: string) => [...jobKeys.detail(id), "positions"] as const,
 };
 
 // ─── Fetch Jobs ───────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ export type UseJobsParams = GetJobsParams;
 
 export function useJobs(
   params?: UseJobsParams,
-  options?: Omit<UseQueryOptions<BaseJob[], Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<BaseJob[], Error>, "queryKey" | "queryFn">,
 ) {
   return useQuery<BaseJob[], Error>({
     queryKey: jobKeys.list(params || {}),
@@ -55,13 +55,13 @@ export function useJobs(
 
 export function useJob(
   jobId: string | undefined,
-  options?: Omit<UseQueryOptions<BaseJob, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<BaseJob, Error>, "queryKey" | "queryFn">,
 ) {
   return useQuery<BaseJob, Error>({
-    queryKey: jobKeys.detail(jobId || ''),
+    queryKey: jobKeys.detail(jobId || ""),
     queryFn: async () => {
       if (!jobId) {
-        throw new Error('Job ID is required');
+        throw new Error("Job ID is required");
       }
       const result = await JobService.getJob(jobId);
       if (!result.success) {
@@ -198,13 +198,13 @@ export function useExpireRapidJob() {
 
 export function useJobCategories(
   jobId: string | undefined,
-  options?: Omit<UseQueryOptions<any[], Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<any[], Error>, "queryKey" | "queryFn">,
 ) {
   return useQuery({
-    queryKey: jobKeys.categories(jobId || ''),
+    queryKey: jobKeys.categories(jobId || ""),
     queryFn: async () => {
       if (!jobId) {
-        throw new Error('Job ID is required');
+        throw new Error("Job ID is required");
       }
       const result = await JobService.getJobCategories(jobId);
       if (!result.success) {
@@ -221,13 +221,13 @@ export function useJobCategories(
 
 export function useJobPositions(
   jobId: string | undefined,
-  options?: Omit<UseQueryOptions<any[], Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<any[], Error>, "queryKey" | "queryFn">,
 ) {
   return useQuery({
-    queryKey: jobKeys.positions(jobId || ''),
+    queryKey: jobKeys.positions(jobId || ""),
     queryFn: async () => {
       if (!jobId) {
-        throw new Error('Job ID is required');
+        throw new Error("Job ID is required");
       }
       const result = await JobService.getJobPositions(jobId);
       if (!result.success) {

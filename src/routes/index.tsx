@@ -35,7 +35,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "QuickWork — Verified Workers, Booked Fast" },
       {
         property: "og:description",
-        content: "Search by category and location. 12-minute average fill time. 4.9 employer rating.",
+        content:
+          "Search by category and location. 12-minute average fill time. 4.9 employer rating.",
       },
     ],
   }),
@@ -45,14 +46,70 @@ export const Route = createFileRoute("/")({
 // ─── Trending Jobs ────────────────────────────────────────────────────────────
 
 const trendingJobs = [
-  { role: "Banquet server", employer: "Grand Palm Banquets", wage: "₹1,200 / shift", area: "Andheri East", date: "Tomorrow · 4:00 PM", tags: ["Meals", "Uniform"] },
-  { role: "Warehouse loader", employer: "Urban Logistics Co.", wage: "₹1,100 / shift", area: "Bhiwandi", date: "Today · 10:00 AM", tags: ["Lunch", "Transport"] },
-  { role: "Event steward", employer: "Blue Orchid Events", wage: "₹1,400 / shift", area: "Bandra Kurla", date: "Wed · 3:00 PM", tags: ["Transport"] },
-  { role: "Retail helper", employer: "MegaMart Superstore", wage: "₹950 / shift", area: "Ghatkopar", date: "Thu · 9:00 AM", tags: ["Meals"] },
-  { role: "Kitchen helper", employer: "Saffron Caterers", wage: "₹950 / shift", area: "Powai", date: "Tue · 9:00 AM", tags: ["Meals", "Transport"] },
-  { role: "Housekeeping", employer: "Zenith Hotels", wage: "₹850 / shift", area: "Marine Lines", date: "Today · 6:00 PM", tags: ["Uniform"] },
-  { role: "Delivery associate", employer: "QuickDeliver", wage: "₹1,300 / shift", area: "Thane", date: "Wed · 8:00 AM", tags: ["Transport"] },
-  { role: "Catering assistant", employer: "Royal Feast", wage: "₹1,050 / shift", area: "Malad", date: "Fri · 5:00 PM", tags: ["Meals", "Uniform"] },
+  {
+    role: "Banquet server",
+    employer: "Grand Palm Banquets",
+    wage: "₹1,200 / shift",
+    area: "Andheri East",
+    date: "Tomorrow · 4:00 PM",
+    tags: ["Meals", "Uniform"],
+  },
+  {
+    role: "Warehouse loader",
+    employer: "Urban Logistics Co.",
+    wage: "₹1,100 / shift",
+    area: "Bhiwandi",
+    date: "Today · 10:00 AM",
+    tags: ["Lunch", "Transport"],
+  },
+  {
+    role: "Event steward",
+    employer: "Blue Orchid Events",
+    wage: "₹1,400 / shift",
+    area: "Bandra Kurla",
+    date: "Wed · 3:00 PM",
+    tags: ["Transport"],
+  },
+  {
+    role: "Retail helper",
+    employer: "MegaMart Superstore",
+    wage: "₹950 / shift",
+    area: "Ghatkopar",
+    date: "Thu · 9:00 AM",
+    tags: ["Meals"],
+  },
+  {
+    role: "Kitchen helper",
+    employer: "Saffron Caterers",
+    wage: "₹950 / shift",
+    area: "Powai",
+    date: "Tue · 9:00 AM",
+    tags: ["Meals", "Transport"],
+  },
+  {
+    role: "Housekeeping",
+    employer: "Zenith Hotels",
+    wage: "₹850 / shift",
+    area: "Marine Lines",
+    date: "Today · 6:00 PM",
+    tags: ["Uniform"],
+  },
+  {
+    role: "Delivery associate",
+    employer: "QuickDeliver",
+    wage: "₹1,300 / shift",
+    area: "Thane",
+    date: "Wed · 8:00 AM",
+    tags: ["Transport"],
+  },
+  {
+    role: "Catering assistant",
+    employer: "Royal Feast",
+    wage: "₹1,050 / shift",
+    area: "Malad",
+    date: "Fri · 5:00 PM",
+    tags: ["Meals", "Uniform"],
+  },
 ];
 
 // ─── Activity Stats ───────────────────────────────────────────────────────────
@@ -115,10 +172,20 @@ const rapidJobs = [
 
 const categories = [
   { name: "Catering", icon: Wrench, count: "245", color: "bg-primary/10 text-primary" },
-  { name: "Warehousing", icon: HardHat, count: "189", color: "bg-gold/10 text-gold-foreground dark:text-gold" },
+  {
+    name: "Warehousing",
+    icon: HardHat,
+    count: "189",
+    color: "bg-gold/10 text-gold-foreground dark:text-gold",
+  },
   { name: "Logistics", icon: TrendingUp, count: "132", color: "bg-success/10 text-success" },
   { name: "Retail", icon: Users, count: "98", color: "bg-primary/10 text-primary" },
-  { name: "Events", icon: CalendarCheck, count: "167", color: "bg-gold/10 text-gold-foreground dark:text-gold" },
+  {
+    name: "Events",
+    icon: CalendarCheck,
+    count: "167",
+    color: "bg-gold/10 text-gold-foreground dark:text-gold",
+  },
   { name: "Housekeeping", icon: Sparkles, count: "87", color: "bg-success/10 text-success" },
 ];
 
@@ -145,10 +212,12 @@ function Index() {
             <Sparkles className="size-3.5" /> Now live across 6 categories
           </span>
           <h1 className="mt-6 max-w-3xl text-5xl leading-[1.05] font-bold text-white sm:text-6xl lg:text-7xl">
-            Find verified workers or pick up a shift, <span className="text-brand-gradient">right now</span>.
+            Find verified workers or pick up a shift,{" "}
+            <span className="text-brand-gradient">right now</span>.
           </h1>
           <p className="mt-6 max-w-xl text-lg text-white/75">
-            One account. Post a job in minutes or find verified work near you — no role-switching needed.
+            One account. Post a job in minutes or find verified work near you — no role-switching
+            needed.
           </p>
 
           {/* Search bar */}
@@ -218,10 +287,14 @@ function Index() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Open Jobs</p>
-                <p className="font-display text-3xl font-bold text-primary">{activityStats.totalOpenJobs.toLocaleString()}</p>
+                <p className="font-display text-3xl font-bold text-primary">
+                  {activityStats.totalOpenJobs.toLocaleString()}
+                </p>
               </div>
             </div>
-            <p className="mt-4 text-xs text-muted-foreground">Across all categories and locations</p>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Across all categories and locations
+            </p>
           </div>
 
           {/* Jobs Filled Today */}
@@ -232,10 +305,14 @@ function Index() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Jobs Filled Today</p>
-                <p className="font-display text-3xl font-bold text-success">{activityStats.jobsFilledToday.toLocaleString()}</p>
+                <p className="font-display text-3xl font-bold text-success">
+                  {activityStats.jobsFilledToday.toLocaleString()}
+                </p>
               </div>
             </div>
-            <p className="mt-4 text-xs text-muted-foreground">Shifts successfully booked in the last 24 hours</p>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Shifts successfully booked in the last 24 hours
+            </p>
           </div>
 
           {/* Trending Categories */}
@@ -272,7 +349,7 @@ function Index() {
         <div className="relative overflow-hidden rounded-3xl border-2 border-[#D62E1F]/30 bg-gradient-to-br from-[#D62E1F]/5 via-background to-background p-8 lg:p-12">
           {/* Pulsing background effect */}
           <div className="absolute inset-0 bg-[#D62E1F]/5 animate-pulse" />
-          
+
           <div className="relative">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-3">
@@ -284,7 +361,9 @@ function Index() {
                 </div>
                 <div>
                   <h2 className="text-3xl font-bold text-[#D62E1F] sm:text-4xl">Rapid Jobs</h2>
-                  <p className="text-sm text-muted-foreground">Starting within the next hour — act fast!</p>
+                  <p className="text-sm text-muted-foreground">
+                    Starting within the next hour — act fast!
+                  </p>
                 </div>
               </div>
               <div className="ml-auto">
@@ -354,9 +433,9 @@ function Index() {
                   </div>
 
                   {/* CTA Button */}
-                  <Button 
-                    variant="default" 
-                    size="lg" 
+                  <Button
+                    variant="default"
+                    size="lg"
                     className="mt-6 w-full bg-[#D62E1F] text-white hover:bg-[#B02518] shadow-lg"
                     asChild
                   >
@@ -374,8 +453,13 @@ function Index() {
                 <div className="flex items-center gap-3">
                   <AlertCircle className="size-5 text-[#D62E1F]" />
                   <p className="text-sm font-medium">
-                    <span className="font-bold text-[#D62E1F]">Matched workers get instant push notifications</span>
-                    <span className="text-muted-foreground"> — and a reminder at 15 minutes if still unfilled</span>
+                    <span className="font-bold text-[#D62E1F]">
+                      Matched workers get instant push notifications
+                    </span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      — and a reminder at 15 minutes if still unfilled
+                    </span>
                   </p>
                 </div>
               </div>
@@ -537,4 +621,3 @@ function Index() {
     </div>
   );
 }
-

@@ -1,10 +1,10 @@
 # QuickWork Connect
 
-Build a web app called "QuickWork" — a smart workforce booking platform 
+Build a web app called "QuickWork" — a smart workforce booking platform
 
-connecting businesses with verified daily-wage workers for instant, 
+connecting businesses with verified daily-wage workers for instant,
 
-short-term employment. Initial focus: catering industry, expandable to 
+short-term employment. Initial focus: catering industry, expandable to
 
 warehousing, logistics, retail, events, and housekeeping.
 
@@ -12,7 +12,7 @@ DESIGN SYSTEM (strict — use these exact values):
 
 - Primary Orange: #F26B1D
 
-- Deep Orange/Red: #D62E1F  
+- Deep Orange/Red: #D62E1F
 
 - Sun Gold accent: #FFB627
 
@@ -30,31 +30,31 @@ DESIGN SYSTEM (strict — use these exact values):
 
 - Border radius: 12-16px, not fully rounded
 
-- Support both LIGHT and DARK mode with a toggle in the top nav 
+- Support both LIGHT and DARK mode with a toggle in the top nav
 
-  (persist user choice). Dark mode = charcoal backgrounds with orange 
+  (persist user choice). Dark mode = charcoal backgrounds with orange
 
-  glow accents, not pure black. Light mode = warm off-white, not 
+  glow accents, not pure black. Light mode = warm off-white, not
 
   sterile white.
 
-BRAND FEEL: Bold, energetic, trustworthy — like a modern gig-economy 
+BRAND FEEL: Bold, energetic, trustworthy — like a modern gig-economy
 
-app (think Swiggy/Ola-level polish) crossed with a professional 
+app (think Swiggy/Ola-level polish) crossed with a professional
 
-verification service. Should feel exciting and modern to young users 
+verification service. Should feel exciting and modern to young users
 
 (18-30) but instantly trustworthy to business owners.
 
 CORE STRUCTURE:
 
-1. Landing page with a hero section using an orange-to-black gradient 
+1. Landing page with a hero section using an orange-to-black gradient
 
-   mesh background. Headline should communicate speed + trust. Below 
+   mesh background. Headline should communicate speed + trust. Below
 
-   hero, a clear two-path split: "I'm Hiring" vs "I'm Looking for Work" 
+   hero, a clear two-path split: "I'm Hiring" vs "I'm Looking for Work"
 
-   as two large, distinct cards with hover animations (subtle scale + 
+   as two large, distinct cards with hover animations (subtle scale +
 
    glow).
 
@@ -62,25 +62,25 @@ CORE STRUCTURE:
 
    Get Started on right. Sticky on scroll with a subtle blur background.
 
-3. "How It Works" section as a 3-4 step horizontal flow with icons, 
+3. "How It Works" section as a 3-4 step horizontal flow with icons,
 
    using bento-grid style cards.
 
-4. "Trust & Verification" section highlighting the Skill Verification 
+4. "Trust & Verification" section highlighting the Skill Verification
 
-   Program and Verified Professional Badge — use a badge/shield visual 
+   Program and Verified Professional Badge — use a badge/shield visual
 
    motif with gold accent color.
 
-5. Employer dashboard (basic): post a job (fields: date, time, location, 
+5. Employer dashboard (basic): post a job (fields: date, time, location,
 
-   number of workers, wage, facilities), view applicants, job status 
+   number of workers, wage, facilities), view applicants, job status
 
    cards in a bento grid.
 
-6. Worker dashboard (basic): browse job listings as cards (location, 
+6. Worker dashboard (basic): browse job listings as cards (location,
 
-   wage, date/time, employer rating), one-tap "Book This Job" button, 
+   wage, date/time, employer rating), one-tap "Book This Job" button,
 
    profile section showing Verified Badge status.
 
@@ -88,7 +88,7 @@ CORE STRUCTURE:
 
 INTERACTIONS:
 
-- Buttons: scale up slightly (1.03x) + orange glow shadow on hover, 
+- Buttons: scale up slightly (1.03x) + orange glow shadow on hover,
 
   smooth 200ms transitions
 
@@ -100,17 +100,17 @@ INTERACTIONS:
 
 - Smooth page transitions, no jarring jumps
 
-NAVIGATION: Keep it extremely simple — max 4-5 nav items. Every action 
+NAVIGATION: Keep it extremely simple — max 4-5 nav items. Every action
 
-should be reachable in 2 clicks max from home. Avoid clutter; this app 
+should be reachable in 2 clicks max from home. Avoid clutter; this app
 
-will be used by people with varying smartphone literacy, so clarity 
+will be used by people with varying smartphone literacy, so clarity
 
 beats cleverness.
 
-Do not use generic default Tailwind/shadcn styling untouched — 
+Do not use generic default Tailwind/shadcn styling untouched —
 
-customize colors, shadows, and spacing to match the brand system above 
+customize colors, shadows, and spacing to match the brand system above
 
 so it doesn't look like a template.
 
@@ -151,6 +151,7 @@ npm run build
 ```
 
 ### Authentication Providers
+
 - **Email OTP**: Works out of the box with Supabase Auth.
-- **Phone OTP**: Configure an SMS provider (e.g. Twilio) under *Supabase Dashboard -> Authentication -> Providers -> Phone*.
-- **Google OAuth**: Add your Google Client ID & Secret under *Supabase Dashboard -> Authentication -> Providers -> Google*.
+- **Phone OTP**: Configure an SMS provider (e.g. Twilio) under _Supabase Dashboard -> Authentication -> Providers -> Phone_.
+- **Google OAuth**: Add your Google Client ID & Secret under _Supabase Dashboard -> Authentication -> Providers -> Google_.

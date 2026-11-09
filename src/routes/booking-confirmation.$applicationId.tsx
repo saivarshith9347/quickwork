@@ -80,10 +80,10 @@ function BookingConfirmationPage() {
   const { applicationId } = Route.useParams();
   const navigate = useNavigate();
   const { user, isLoggedIn } = useAuth();
-  
+
   // Fetch application using React Query
   const { data: application, isLoading: appLoading } = useApplication(applicationId);
-  
+
   // Fetch job details if we have an application
   const { data: job, isLoading: jobLoading } = useJob(application?.jobId, {
     enabled: !!application?.jobId,
@@ -124,7 +124,11 @@ function BookingConfirmationPage() {
     );
   }
 
-  if (!application || !isLoggedIn || (application.status !== "BOOKED" && application.status !== "ACCEPTED")) {
+  if (
+    !application ||
+    !isLoggedIn ||
+    (application.status !== "BOOKED" && application.status !== "ACCEPTED")
+  ) {
     return null;
   }
 
@@ -143,9 +147,10 @@ function BookingConfirmationPage() {
   }
 
   // Extract location
-  const location = typeof job.location === 'object' 
-    ? job.location 
-    : { venueName: formatLocation(job.location, 'short'), fullAddress: job.location };
+  const location =
+    typeof job.location === "object"
+      ? job.location
+      : { venueName: formatLocation(job.location, "short"), fullAddress: job.location };
 
   // Generate booking ID from application ID
   const bookingId = `BK${application.id.substring(0, 8).toUpperCase()}`;
@@ -298,9 +303,7 @@ function BookingConfirmationPage() {
                 <p className="text-sm font-semibold text-muted-foreground">Wage</p>
                 <p
                   className={`mt-1 font-display text-3xl font-bold ${
-                    job.isRapidJob
-                      ? "text-orange-600 dark:text-orange-400"
-                      : "text-primary"
+                    job.isRapidJob ? "text-orange-600 dark:text-orange-400" : "text-primary"
                   }`}
                 >
                   ₹{job.wage.toLocaleString("en-IN")}
@@ -322,9 +325,7 @@ function BookingConfirmationPage() {
                 <Clock className="size-6" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold uppercase tracking-wide text-primary">
-                  Important
-                </p>
+                <p className="text-sm font-bold uppercase tracking-wide text-primary">Important</p>
                 <p className="mt-1 font-semibold">Report by {reportingTime}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Arrive 30 minutes before shift start for briefing and preparation
@@ -391,7 +392,8 @@ function BookingConfirmationPage() {
         {/* Footer Note */}
         <div className="mt-8 rounded-xl border border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground animate-in fade-in duration-700 delay-700">
           <p>
-            Save this booking ID: <span className="font-mono font-bold text-foreground">{bookingId}</span>
+            Save this booking ID:{" "}
+            <span className="font-mono font-bold text-foreground">{bookingId}</span>
           </p>
           <p className="mt-1">
             You can view this confirmation anytime from{" "}

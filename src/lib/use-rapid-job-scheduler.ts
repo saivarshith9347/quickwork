@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
-import { createRapidJobScheduler, type RapidJobScheduler, type RapidJobSchedulerConfig } from "./rapid-job-scheduler";
+import {
+  createRapidJobScheduler,
+  type RapidJobScheduler,
+  type RapidJobSchedulerConfig,
+} from "./rapid-job-scheduler";
 import type { BaseJob } from "./job-types";
 
 interface UseRapidJobSchedulerOptions {
@@ -7,27 +11,29 @@ interface UseRapidJobSchedulerOptions {
    * Interval in milliseconds between checks (default: 60000 = 1 minute)
    */
   checkInterval?: number;
-  
+
   /**
    * Callback fired when rapid jobs need status updates
    */
-  onUpdate?: (updates: Array<{
-    jobId: string;
-    shouldHide: boolean;
-    newStatus?: string;
-    reason: string;
-  }>) => void;
-  
+  onUpdate?: (
+    updates: Array<{
+      jobId: string;
+      shouldHide: boolean;
+      newStatus?: string;
+      reason: string;
+    }>,
+  ) => void;
+
   /**
    * Callback for logging scheduler events
    */
   onLog?: (message: string) => void;
-  
+
   /**
    * Whether to start the scheduler immediately (default: true)
    */
   autoStart?: boolean;
-  
+
   /**
    * Function to fetch all jobs for checking
    */
@@ -37,7 +43,7 @@ interface UseRapidJobSchedulerOptions {
 /**
  * React hook for managing the rapid job scheduler lifecycle.
  * Automatically starts/stops the scheduler with component mount/unmount.
- * 
+ *
  * @example
  * ```tsx
  * function App() {
@@ -51,7 +57,7 @@ interface UseRapidJobSchedulerOptions {
  *     },
  *     onLog: console.log,
  *   });
- * 
+ *
  *   return <YourApp />;
  * }
  * ```
@@ -71,10 +77,10 @@ export function useRapidJobScheduler(options: UseRapidJobSchedulerOptions = {}) 
     const config: RapidJobSchedulerConfig = {
       checkInterval: checkInterval ?? 30000,
     };
-    
+
     if (onUpdate) config.onUpdate = onUpdate;
     if (onLog) config.onLog = onLog;
-    
+
     schedulerRef.current = createRapidJobScheduler(config);
 
     // Start if autoStart is enabled
@@ -96,7 +102,7 @@ export function useRapidJobScheduler(options: UseRapidJobSchedulerOptions = {}) 
 /**
  * Simplified hook that just runs the scheduler without exposing the instance.
  * Good for when you just want automatic checking without manual control.
- * 
+ *
  * @example
  * ```tsx
  * function App() {
@@ -107,11 +113,13 @@ export function useRapidJobScheduler(options: UseRapidJobSchedulerOptions = {}) 
  * }
  * ```
  */
-export function useAutoRapidJobCheck(options: {
-  checkInterval?: number;
-  onExpiry?: (jobId: string, reason: string) => void;
-  getJobs?: () => BaseJob[];
-} = {}) {
+export function useAutoRapidJobCheck(
+  options: {
+    checkInterval?: number;
+    onExpiry?: (jobId: string, reason: string) => void;
+    getJobs?: () => BaseJob[];
+  } = {},
+) {
   useRapidJobScheduler({
     checkInterval: options.checkInterval ?? 30000,
     onUpdate: (updates) => {

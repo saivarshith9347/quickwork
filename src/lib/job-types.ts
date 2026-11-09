@@ -32,7 +32,7 @@ export enum JobStatus {
 
 // ─── Type Aliases for Backwards Compatibility ─────────────────────────────────
 
-export type JobCategoryValue = 
+export type JobCategoryValue =
   | "Hospitality"
   | "Events"
   | "Delivery"
@@ -55,24 +55,26 @@ export type JobStatusValue = "Open" | "PartiallyFilled" | "FullyFilled" | "Compl
 export interface JobLocation {
   /** Name of the venue/establishment (e.g., "Grand Palm Banquets") */
   venueName: string;
-  
+
   /** Full street address */
   fullAddress: string;
-  
+
   /** Area/neighborhood (e.g., "Andheri East") */
   area: string;
-  
+
   /** City name (e.g., "Mumbai") */
   city: string;
-  
+
   /** Nearby landmark for easier navigation (optional) */
   landmark?: string | undefined;
-  
+
   /** GPS coordinates for map integration (optional) */
-  mapCoordinates?: {
-    latitude: number;
-    longitude: number;
-  } | undefined;
+  mapCoordinates?:
+    | {
+        latitude: number;
+        longitude: number;
+      }
+    | undefined;
 }
 
 /**
@@ -94,19 +96,19 @@ export type JobLocationValue = JobLocation | LegacyLocation;
 export interface JobRequirements {
   /** Required experience level (e.g., "Entry level", "2+ years", "Experienced") */
   experience?: string | undefined;
-  
+
   /** Required skills (e.g., ["Food handling", "Customer service"]) */
   skills?: string[] | undefined;
-  
+
   /** Age requirement (e.g., "18+", "21-50", "No restriction") */
   ageRequirement?: string | undefined;
-  
+
   /** Required languages (e.g., ["English", "Hindi", "Marathi"]) */
   languages?: string[] | undefined;
-  
+
   /** Dress code requirements (e.g., "Formal black and white", "Provided uniform") */
   dressCode?: string | undefined;
-  
+
   /** Required documents (e.g., ["Government ID", "Bank details", "Police verification"]) */
   documentsRequired?: string[] | undefined;
 
@@ -120,7 +122,7 @@ export interface JobRequirements {
 export interface JobInstructions {
   /** Instructions before arriving at the venue */
   beforeArrival?: string[] | undefined;
-  
+
   /** Instructions during the shift */
   duringShift?: string[] | undefined;
 }
@@ -131,10 +133,10 @@ export interface JobInstructions {
 export interface ReportingContact {
   /** Contact person name */
   name: string;
-  
+
   /** Contact method (e.g., "Phone", "WhatsApp", "On-site manager") */
   method: string;
-  
+
   /** Where to report (e.g., "Main entrance", "Back office", "Security desk") */
   location: string;
 
@@ -147,45 +149,45 @@ export interface ReportingContact {
 export interface BaseJob {
   id: string;
   employerId: string;
-  
+
   // New required fields
   jobTitle: string;
   category: JobCategoryValue;
   description: string;
-  
+
   // Location (structured or legacy string)
   location: JobLocationValue;
-  
+
   // Timing fields
   date: string; // ISO date string
   startTime: string; // HH:mm format
   endTime: string; // HH:mm format
   duration?: number | undefined; // Calculated duration in minutes
-  
+
   // Job type
   jobType: JobTypeValue;
-  
+
   // Position tracking
   positionsRequired: number; // Total positions needed
   positionsConfirmed: number; // Positions filled
   positionsRemaining: number; // Calculated: positionsRequired - positionsConfirmed
-  
+
   // Job status (auto-updated based on positions and date)
   status: JobStatusValue;
-  
+
   // Compensation & facilities
   wage: number; // Base wage in rupees
   facilities?: string[] | undefined; // e.g., ["Meals provided", "Transport", "Uniform"]
-  
+
   // Rapid Jobs
   isRapidJob: boolean; // True if this is an urgent/rapid job
   rapidJobExpiresAt?: string | undefined; // ISO timestamp - when rapid job expires (1-2 hours from posting)
-  
+
   // Requirements, instructions, and reporting
   requirements?: JobRequirements | undefined;
   instructions?: JobInstructions | undefined;
   reportingContact?: ReportingContact | undefined; // Private: only visible to confirmed workers
-  
+
   // Metadata
   createdAt: string;
   updatedAt: string;
@@ -197,7 +199,7 @@ export interface BaseJob {
  * Type guard to check if location is structured JobLocation object.
  */
 export function isStructuredLocation(location: JobLocationValue): location is JobLocation {
-  return typeof location === 'object' && location !== null && 'venueName' in location;
+  return typeof location === "object" && location !== null && "venueName" in location;
 }
 
 /**
@@ -208,7 +210,7 @@ export function getLocationArea(location: JobLocationValue): string {
     return location.area;
   }
   // Legacy format: extract area from string (usually first part before comma)
-  const parts = location.split(',');
+  const parts = location.split(",");
   return parts[0]?.trim() || location;
 }
 
@@ -220,7 +222,7 @@ export function getLocationCity(location: JobLocationValue): string {
     return location.city;
   }
   // Legacy format: extract city from string (usually last part after comma)
-  const parts = location.split(',');
+  const parts = location.split(",");
   return parts[parts.length - 1]?.trim() || location;
 }
 
@@ -230,15 +232,15 @@ export function getLocationCity(location: JobLocationValue): string {
  */
 export function formatLocation(
   location: JobLocationValue,
-  format: 'short' | 'medium' | 'full' = 'medium'
+  format: "short" | "medium" | "full" = "medium",
 ): string {
   if (isStructuredLocation(location)) {
     switch (format) {
-      case 'short':
+      case "short":
         return location.area;
-      case 'medium':
+      case "medium":
         return `${location.area}, ${location.city}`;
-      case 'full':
+      case "full":
         return location.landmark
           ? `${location.venueName}, ${location.fullAddress}, ${location.area}, ${location.city} (Near ${location.landmark})`
           : `${location.venueName}, ${location.fullAddress}, ${location.area}, ${location.city}`;
@@ -273,7 +275,9 @@ export function getFullAddress(location: JobLocationValue): string {
 /**
  * Get map coordinates from location if available.
  */
-export function getMapCoordinates(location: JobLocationValue): { latitude: number; longitude: number } | null {
+export function getMapCoordinates(
+  location: JobLocationValue,
+): { latitude: number; longitude: number } | null {
   if (isStructuredLocation(location) && location.mapCoordinates) {
     return location.mapCoordinates;
   }
@@ -290,15 +294,15 @@ export function migrateLocationToStructured(
     venueName?: string;
     fullAddress?: string;
     landmark?: string;
-  }
+  },
 ): JobLocation {
-  const parts = legacyLocation.split(',').map(s => s.trim());
-  
+  const parts = legacyLocation.split(",").map((s) => s.trim());
+
   return {
-    venueName: options?.venueName || 'Unknown Venue',
+    venueName: options?.venueName || "Unknown Venue",
     fullAddress: options?.fullAddress || legacyLocation,
     area: parts[0] || legacyLocation,
-    city: parts[parts.length - 1] || 'Unknown City',
+    city: parts[parts.length - 1] || "Unknown City",
     landmark: options?.landmark,
   };
 }
@@ -312,22 +316,22 @@ export function migrateLocationToStructured(
  * @returns Duration in minutes
  */
 export function calculateDuration(startTime: string, endTime: string): number {
-  const startParts = startTime.split(':');
-  const endParts = endTime.split(':');
-  
+  const startParts = startTime.split(":");
+  const endParts = endTime.split(":");
+
   const startHour = Number(startParts[0]);
   const startMin = Number(startParts[1]);
   const endHour = Number(endParts[0]);
   const endMin = Number(endParts[1]);
-  
+
   const startMinutes = startHour * 60 + startMin;
   let endMinutes = endHour * 60 + endMin;
-  
+
   // Handle overnight shifts (end time is next day)
   if (endMinutes <= startMinutes) {
     endMinutes += 24 * 60; // Add 24 hours in minutes
   }
-  
+
   return endMinutes - startMinutes;
 }
 
@@ -339,11 +343,11 @@ export function calculateDuration(startTime: string, endTime: string): number {
 export function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  
+
   if (mins === 0) {
     return `${hours}h`;
   }
-  
+
   return `${hours}h ${mins}m`;
 }
 
@@ -380,7 +384,7 @@ export function isValidJobStatus(value: string): value is JobStatusValue {
  */
 export function calculatePositionsRemaining(
   positionsRequired: number,
-  positionsConfirmed: number
+  positionsConfirmed: number,
 ): number {
   return Math.max(0, positionsRequired - positionsConfirmed);
 }
@@ -397,35 +401,35 @@ export function calculateJobStatus(
   positionsRequired: number,
   positionsConfirmed: number,
   jobDate: string,
-  currentStatus?: JobStatusValue
+  currentStatus?: JobStatusValue,
 ): JobStatusValue {
   // If manually cancelled, keep that status
   if (currentStatus === JobStatus.Cancelled) {
     return JobStatus.Cancelled;
   }
-  
+
   const jobDateTime = new Date(jobDate).getTime();
   const now = Date.now();
-  
+
   // Check if job date has passed
   const jobEndOfDay = new Date(jobDate);
   jobEndOfDay.setHours(23, 59, 59, 999);
-  
+
   if (now > jobEndOfDay.getTime()) {
     return JobStatus.Completed;
   }
-  
+
   // Check position fill status
   const positionsRemaining = calculatePositionsRemaining(positionsRequired, positionsConfirmed);
-  
+
   if (positionsConfirmed === 0) {
     return JobStatus.Open;
   }
-  
+
   if (positionsRemaining === 0) {
     return JobStatus.FullyFilled;
   }
-  
+
   // Partially filled
   return JobStatus.PartiallyFilled;
 }
@@ -445,10 +449,7 @@ export function canAcceptApplications(status: JobStatusValue): boolean {
  * @param positionsConfirmed - Positions filled
  * @returns Percentage filled (0-100)
  */
-export function getFillPercentage(
-  positionsRequired: number,
-  positionsConfirmed: number
-): number {
+export function getFillPercentage(positionsRequired: number, positionsConfirmed: number): number {
   if (positionsRequired === 0) return 0;
   return Math.round((positionsConfirmed / positionsRequired) * 100);
 }
@@ -469,7 +470,7 @@ export const JOB_CATEGORY_LABELS: Record<JobCategoryValue, string> = {
 export const JOB_TYPE_LABELS: Record<JobTypeValue, string> = {
   "one-time": "One-time",
   "multiple-days": "Multiple Days",
-  "recurring": "Recurring",
+  recurring: "Recurring",
 };
 
 export const JOB_STATUS_LABELS: Record<JobStatusValue, string> = {
@@ -480,9 +481,16 @@ export const JOB_STATUS_LABELS: Record<JobStatusValue, string> = {
   Cancelled: "Cancelled",
 };
 
-export const JOB_STATUS_COLORS: Record<JobStatusValue, { bg: string; text: string; border: string }> = {
+export const JOB_STATUS_COLORS: Record<
+  JobStatusValue,
+  { bg: string; text: string; border: string }
+> = {
   Open: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/40" },
-  PartiallyFilled: { bg: "bg-gold/10", text: "text-gold-foreground dark:text-gold", border: "border-gold/40" },
+  PartiallyFilled: {
+    bg: "bg-gold/10",
+    text: "text-gold-foreground dark:text-gold",
+    border: "border-gold/40",
+  },
   FullyFilled: { bg: "bg-success/10", text: "text-success", border: "border-success/40" },
   Completed: { bg: "bg-muted", text: "text-muted-foreground", border: "border-border" },
   Cancelled: { bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/40" },
@@ -524,12 +532,12 @@ export function toJobListing(
     employerName?: string;
     rating?: string;
     distance?: string;
-  }
+  },
 ): JobListing {
   const duration = job.duration ?? calculateDuration(job.startTime, job.endTime);
   const area = getLocationArea(job.location);
-  const locationDisplay = formatLocation(job.location, 'medium');
-  
+  const locationDisplay = formatLocation(job.location, "medium");
+
   return {
     id: job.id,
     jobTitle: job.jobTitle,
@@ -582,12 +590,12 @@ export function isRapidJobExpired(rapidJobExpiresAt?: string): boolean {
  */
 export function getRapidJobTimeRemaining(rapidJobExpiresAt?: string): number {
   if (!rapidJobExpiresAt) return 0;
-  
+
   const expiryTime = new Date(rapidJobExpiresAt).getTime();
   const now = Date.now();
-  
+
   if (now >= expiryTime) return 0;
-  
+
   return Math.ceil((expiryTime - now) / (1000 * 60)); // Convert to minutes
 }
 
@@ -598,20 +606,20 @@ export function getRapidJobTimeRemaining(rapidJobExpiresAt?: string): number {
  */
 export function formatRapidJobTimeRemaining(rapidJobExpiresAt?: string): string {
   const minutesRemaining = getRapidJobTimeRemaining(rapidJobExpiresAt);
-  
-  if (minutesRemaining === 0) return 'Expired';
-  
+
+  if (minutesRemaining === 0) return "Expired";
+
   if (minutesRemaining < 60) {
     return `${minutesRemaining} min`;
   }
-  
+
   const hours = Math.floor(minutesRemaining / 60);
   const mins = minutesRemaining % 60;
-  
+
   if (mins === 0) {
     return `${hours}h`;
   }
-  
+
   return `${hours}h ${mins}m`;
 }
 
@@ -625,17 +633,17 @@ export function formatRapidJobTimeRemaining(rapidJobExpiresAt?: string): string 
  */
 export function shouldHideRapidJob(job: BaseJob): boolean {
   if (!job.isRapidJob) return false;
-  
+
   // Hide if expired
   if (isRapidJobExpired(job.rapidJobExpiresAt)) {
     return true;
   }
-  
+
   // Hide if fully filled
   if (job.status === JobStatus.FullyFilled) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -651,24 +659,24 @@ export function updateRapidJobStatus(job: BaseJob): {
   reason: string;
 } | null {
   if (!job.isRapidJob) return null;
-  
+
   // Check if expired
   if (isRapidJobExpired(job.rapidJobExpiresAt)) {
     return {
       shouldHide: true,
       newStatus: job.status === JobStatus.Open ? JobStatus.Cancelled : job.status,
-      reason: 'Rapid job expired',
+      reason: "Rapid job expired",
     };
   }
-  
+
   // Check if fully filled
   if (job.status === JobStatus.FullyFilled) {
     return {
       shouldHide: true,
-      reason: 'Rapid job fully filled',
+      reason: "Rapid job fully filled",
     };
   }
-  
+
   return null;
 }
 
@@ -690,8 +698,8 @@ export function getRapidJobsNeedingUpdate(jobs: BaseJob[]): Array<{
     newStatus?: JobStatusValue;
     reason: string;
   }> = [];
-  
-  jobs.forEach(job => {
+
+  jobs.forEach((job) => {
     const update = updateRapidJobStatus(job);
     if (update) {
       updates.push({
@@ -700,7 +708,7 @@ export function getRapidJobsNeedingUpdate(jobs: BaseJob[]): Array<{
       });
     }
   });
-  
+
   return updates;
 }
 
@@ -710,7 +718,7 @@ export function getRapidJobsNeedingUpdate(jobs: BaseJob[]): Array<{
  * @returns Filtered array with hidden rapid jobs removed
  */
 export function filterVisibleRapidJobs(jobs: BaseJob[]): BaseJob[] {
-  return jobs.filter(job => {
+  return jobs.filter((job) => {
     if (!job.isRapidJob) return true; // Keep non-rapid jobs
     return !shouldHideRapidJob(job); // Only keep visible rapid jobs
   });

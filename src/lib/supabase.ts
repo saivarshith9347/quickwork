@@ -19,9 +19,7 @@ import { createClient, type SupabaseClient as SupabaseClientType } from "@supaba
 import type { Database } from "./database.types";
 
 const supabaseUrl = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
-const supabaseAnonKey = import.meta.env["VITE_SUPABASE_ANON_KEY"] as
-  | string
-  | undefined;
+const supabaseAnonKey = import.meta.env["VITE_SUPABASE_ANON_KEY"] as string | undefined;
 
 // Track whether credentials are configured
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
@@ -32,7 +30,7 @@ let _supabaseClient: SupabaseClientType<Database> | null = null;
 /**
  * Get the Supabase client instance.
  * Returns null if credentials are not configured.
- * 
+ *
  * @throws {Error} if throwOnMissing is true and credentials are not configured
  */
 export function getSupabase(throwOnMissing = false): SupabaseClientType<Database> | null {

@@ -105,13 +105,13 @@ const FACILITY_ICONS: Record<string, typeof UtensilsCrossed> = {
 };
 
 const CONFIRM_BOOKING_ERRORS: Record<string, string> = {
-  position_not_found:              "This position no longer exists.",
-  position_already_booked:         "Position was booked by another worker just now.",
-  no_active_lock:                  "Your hold on this position has expired. Please select again.",
-  position_cancelled:              "This position has been cancelled by the employer.",
-  position_unavailable:            "This position is no longer available.",
-  lock_owned_by_different_worker:  "Another worker holds this position.",
-  lock_expired:                    "Your 2-minute hold expired. Please select again.",
+  position_not_found: "This position no longer exists.",
+  position_already_booked: "Position was booked by another worker just now.",
+  no_active_lock: "Your hold on this position has expired. Please select again.",
+  position_cancelled: "This position has been cancelled by the employer.",
+  position_unavailable: "This position is no longer available.",
+  lock_owned_by_different_worker: "Another worker holds this position.",
+  lock_expired: "Your 2-minute hold expired. Please select again.",
 };
 
 // ─── Lock countdown ───────────────────────────────────────────────────────────
@@ -134,11 +134,7 @@ function LockTimer({ expiresAt }: { expiresAt: string }) {
   return (
     <span
       className={`font-display font-bold tabular-nums ${
-        expired
-          ? "text-destructive"
-          : isUrgent
-            ? "text-destructive animate-pulse"
-            : "text-primary"
+        expired ? "text-destructive" : isUrgent ? "text-destructive animate-pulse" : "text-primary"
       }`}
     >
       {expired ? "Expired" : `${mins}:${String(s).padStart(2, "0")}`}
@@ -204,7 +200,7 @@ function ReviewPage() {
       // Eagerly enrich with job meta if missing fields
       if (!parsed.jobDate || !parsed.startTime) {
         enrichFromSupabase(parsed.jobId).then((meta) => {
-          if (meta) setBooking((b) => b ? { ...b, ...meta } : b);
+          if (meta) setBooking((b) => (b ? { ...b, ...meta } : b));
         });
       }
     } catch {
@@ -313,7 +309,9 @@ function ReviewPage() {
       setConfirming(false);
       const code = result.error ?? "unknown";
       setErrorCode(code);
-      setConfirmError(CONFIRM_BOOKING_ERRORS[code] ?? result.error ?? "This position is no longer available.");
+      setConfirmError(
+        CONFIRM_BOOKING_ERRORS[code] ?? result.error ?? "This position is no longer available.",
+      );
       return;
     }
 
@@ -363,7 +361,8 @@ function ReviewPage() {
 
     const sub = subscribeToJobPositions(booking.jobId, ({ newRow }) => {
       if (!newRow) return;
-      const posNum = typeof newRow["position_number"] === "number" ? newRow["position_number"] : null;
+      const posNum =
+        typeof newRow["position_number"] === "number" ? newRow["position_number"] : null;
       const catId = (newRow["category_id"] as string | null) ?? null;
       const newStatus = (newRow["status"] as string) || "";
       const newWorkerId = (newRow["worker_id"] as string | null) ?? null;
@@ -374,7 +373,8 @@ function ReviewPage() {
 
       if (matchesPosition) {
         const isBooked = newStatus === "BOOKED";
-        const isPendingByOther = newStatus === "PENDING" && newWorkerId && newWorkerId !== myWorkerId;
+        const isPendingByOther =
+          newStatus === "PENDING" && newWorkerId && newWorkerId !== myWorkerId;
 
         if (isBooked || isPendingByOther) {
           const formattedNum = String(currentPosNum).padStart(2, "0");
@@ -449,9 +449,7 @@ function ReviewPage() {
         style={{ animation: "review-enter 0.4s cubic-bezier(0.22,1,0.36,1) both" }}
       >
         <div className="mx-auto max-w-2xl px-5 py-8 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-            Step 2 of 2
-          </p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Step 2 of 2</p>
           <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">
             Review your application
           </h1>
@@ -496,7 +494,8 @@ function ReviewPage() {
             <div>
               <p className="font-bold text-sm">Applications Closed</p>
               <p className="text-xs text-destructive/85 mt-0.5">
-                The shift cutoff for this Rapid Job has passed. New applications cannot be submitted.
+                The shift cutoff for this Rapid Job has passed. New applications cannot be
+                submitted.
               </p>
             </div>
           </div>
@@ -542,9 +541,7 @@ function ReviewPage() {
           <div className="mt-4">
             <DetailRow label="Category" value={booking.categoryName} />
             <DetailRow label="Position" value={`Position ${posNum}`} />
-            {booking.jobDate && (
-              <DetailRow label="Date" value={formatDate(booking.jobDate)} />
-            )}
+            {booking.jobDate && <DetailRow label="Date" value={formatDate(booking.jobDate)} />}
             {booking.startTime && booking.endTime && (
               <DetailRow
                 label="Time"
@@ -579,9 +576,7 @@ function ReviewPage() {
           <div className="flex items-baseline gap-2">
             <span
               className={`font-display text-4xl font-bold ${
-                booking.isRapidJob
-                  ? "text-orange-600 dark:text-orange-400"
-                  : "text-primary"
+                booking.isRapidJob ? "text-orange-600 dark:text-orange-400" : "text-primary"
               }`}
             >
               ₹{booking.wage.toLocaleString("en-IN")}
@@ -615,7 +610,10 @@ function ReviewPage() {
                     key={f}
                     className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-2 text-sm font-medium"
                   >
-                    <Icon className="size-3.5 text-muted-foreground/60 shrink-0" aria-hidden="true" />
+                    <Icon
+                      className="size-3.5 text-muted-foreground/60 shrink-0"
+                      aria-hidden="true"
+                    />
                     {f}
                   </div>
                 );
@@ -650,7 +648,10 @@ function ReviewPage() {
             </div>
             <button
               type="button"
-              onClick={() => { setConfirmError(null); setErrorCode(null); }}
+              onClick={() => {
+                setConfirmError(null);
+                setErrorCode(null);
+              }}
               className="shrink-0 rounded-md p-0.5 text-muted-foreground hover:bg-destructive/10 transition-colors"
               aria-label="Dismiss"
             >
@@ -666,8 +667,8 @@ function ReviewPage() {
         >
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success/70" aria-hidden="true" />
           <p>
-            By confirming, you commit to attending this shift. Your position is reserved atomically —
-            no two workers can book the same position.
+            By confirming, you commit to attending this shift. Your position is reserved atomically
+            — no two workers can book the same position.
           </p>
         </div>
       </div>
@@ -688,9 +689,7 @@ function ReviewPage() {
               </p>
               <p
                 className={`font-display text-lg font-bold ${
-                  booking.isRapidJob
-                    ? "text-orange-600 dark:text-orange-400"
-                    : "text-primary"
+                  booking.isRapidJob ? "text-orange-600 dark:text-orange-400" : "text-primary"
                 }`}
               >
                 ₹{booking.wage.toLocaleString("en-IN")}

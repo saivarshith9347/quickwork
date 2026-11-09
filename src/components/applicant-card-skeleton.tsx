@@ -1,6 +1,6 @@
 /**
  * Applicant Card Skeleton
- * 
+ *
  * Loading placeholder for applicant cards on hire page.
  * Matches the layout of the actual applicant card component.
  */

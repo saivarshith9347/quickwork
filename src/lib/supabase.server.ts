@@ -18,19 +18,16 @@ import type { Database } from "./database.types";
 
 // Track whether server credentials are configured
 export const isServerSupabaseConfigured = !!(
-  process.env["SUPABASE_URL"] && 
-  process.env["SUPABASE_SERVICE_ROLE_KEY"]
+  process.env["SUPABASE_URL"] && process.env["SUPABASE_SERVICE_ROLE_KEY"]
 );
 
 /**
  * Create a Supabase server client with service role key.
- * 
+ *
  * @param throwOnMissing - If true, throws error when credentials missing. Default: true for server context.
  * @returns Supabase client or null if not configured and throwOnMissing is false
  */
-export function createServerSupabaseClient(
-  throwOnMissing = true
-): SupabaseClient<Database> | null {
+export function createServerSupabaseClient(throwOnMissing = true): SupabaseClient<Database> | null {
   const url = process.env["SUPABASE_URL"];
   const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 

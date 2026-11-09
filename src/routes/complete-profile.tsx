@@ -83,9 +83,7 @@ function CompleteProfilePage() {
 
       {/* Heading */}
       <div className="mt-10">
-        <h1 className="font-display text-4xl font-bold sm:text-5xl">
-          Set up your profile
-        </h1>
+        <h1 className="font-display text-4xl font-bold sm:text-5xl">Set up your profile</h1>
         <p className="mt-3 text-muted-foreground">
           Just a few quick details. You can post jobs and find work from the same account.
         </p>
@@ -94,7 +92,9 @@ function CompleteProfilePage() {
       <form onSubmit={handleSubmit} className="mt-10 space-y-6">
         {/* Photo */}
         <div className="grid gap-2">
-          <Label htmlFor="photo">Profile photo <span className="text-muted-foreground">(optional)</span></Label>
+          <Label htmlFor="photo">
+            Profile photo <span className="text-muted-foreground">(optional)</span>
+          </Label>
           <div className="flex items-center gap-4">
             <div className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-border bg-muted">
               {photoPreview ? (
@@ -127,7 +127,9 @@ function CompleteProfilePage() {
 
         {/* Name */}
         <div className="grid gap-2">
-          <Label htmlFor="name">Full name <span className="text-destructive">*</span></Label>
+          <Label htmlFor="name">
+            Full name <span className="text-destructive">*</span>
+          </Label>
           <div className="relative">
             <User className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -144,7 +146,9 @@ function CompleteProfilePage() {
 
         {/* Location */}
         <div className="grid gap-2">
-          <Label htmlFor="location">Location <span className="text-destructive">*</span></Label>
+          <Label htmlFor="location">
+            Location <span className="text-destructive">*</span>
+          </Label>
           <div className="relative">
             <MapPin className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -166,15 +170,21 @@ function CompleteProfilePage() {
           <p className="text-sm font-semibold">With one account you can:</p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li className="flex items-center gap-2.5">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">✓</span>
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                ✓
+              </span>
               Browse and apply for shifts near you
             </li>
             <li className="flex items-center gap-2.5">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">✓</span>
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                ✓
+              </span>
               Post a job and hire verified workers
             </li>
             <li className="flex items-center gap-2.5">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">✓</span>
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                ✓
+              </span>
               Switch between hiring and working any time
             </li>
           </ul>
@@ -187,11 +197,7 @@ function CompleteProfilePage() {
           className="w-full"
           disabled={loading || !name.trim() || !location.trim()}
         >
-          {loading ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            "Get started →"
-          )}
+          {loading ? <Loader2 className="size-4 animate-spin" /> : "Get started →"}
         </Button>
       </form>
     </div>

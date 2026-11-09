@@ -1,5 +1,15 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { Bell, BriefcaseBusiness, ClipboardList, LogOut, Menu, Search, User, X, Zap } from "lucide-react";
+import {
+  Bell,
+  BriefcaseBusiness,
+  ClipboardList,
+  LogOut,
+  Menu,
+  Search,
+  User,
+  X,
+  Zap,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -61,7 +71,10 @@ function UserMenu() {
       >
         <Bell className="size-4" />
         {/* Unread dot */}
-        <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary" aria-hidden="true" />
+        <span
+          className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary"
+          aria-hidden="true"
+        />
       </button>
 
       {/* Avatar */}
@@ -107,7 +120,10 @@ function UserMenu() {
           <div className="my-1.5 h-px bg-border" />
           <button
             type="button"
-            onClick={() => { logout(); setOpen(false); }}
+            onClick={() => {
+              logout();
+              setOpen(false);
+            }}
             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="size-4" /> Sign out
@@ -157,11 +173,7 @@ export function Navbar() {
       >
         <nav className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-5 lg:px-8">
           {/* ── Logo ── */}
-          <Link
-            to="/"
-            className="flex shrink-0 items-center gap-2.5"
-            aria-label="QuickWork home"
-          >
+          <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="QuickWork home">
             <span className="flex size-9 items-center justify-center rounded-lg bg-[image:linear-gradient(135deg,var(--brand),var(--brand-deep))] shadow-brand">
               <Zap className="size-5 text-primary-foreground" />
             </span>
@@ -321,10 +333,26 @@ export function Navbar() {
             </ul>
             {!isLoggedIn && (
               <div className="mt-2 flex gap-2 border-t border-border pt-3">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => { setMobileOpen(false); openLoginModal(); }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    openLoginModal();
+                  }}
+                >
                   Log in
                 </Button>
-                <Button variant="hero" size="sm" className="flex-1" onClick={() => { setMobileOpen(false); openLoginModal({ type: "dashboard" }); }}>
+                <Button
+                  variant="hero"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    openLoginModal({ type: "dashboard" });
+                  }}
+                >
                   Sign up
                 </Button>
               </div>

@@ -65,7 +65,6 @@
   --animate-bar-rise: bar-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-pos-select: pos-select 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   --animate-available-glow: available-glow 3s ease-in-out infinite;
-
 }
 
 :root {
@@ -252,7 +251,8 @@
 
 /* Seat grid: subtle available-slot pulse */
 @keyframes seat-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 transparent;
     opacity: 1;
   }
@@ -268,7 +268,8 @@
 
 /* Rapid job pulse animation - for badges and urgent indicators */
 @keyframes rapid-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.3;
   }
   50% {
@@ -282,7 +283,8 @@
     transform: scale(1);
     opacity: 1;
   }
-  75%, 100% {
+  75%,
+  100% {
     transform: scale(1.5);
     opacity: 0;
   }
@@ -290,28 +292,32 @@
 
 /* Urgent glow animation - pulsing shadow for buttons */
 @keyframes urgent-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px color-mix(in oklab, #FF6B35 40%, transparent),
-                0 4px 16px color-mix(in oklab, #FF6B35 30%, transparent);
+  0%,
+  100% {
+    box-shadow:
+      0 0 20px color-mix(in oklab, #ff6b35 40%, transparent),
+      0 4px 16px color-mix(in oklab, #ff6b35 30%, transparent);
   }
   50% {
-    box-shadow: 0 0 30px color-mix(in oklab, #FF6B35 60%, transparent),
-                0 6px 24px color-mix(in oklab, #FF6B35 45%, transparent);
+    box-shadow:
+      0 0 30px color-mix(in oklab, #ff6b35 60%, transparent),
+      0 6px 24px color-mix(in oklab, #ff6b35 45%, transparent);
   }
 }
 
 /* Rapid job gradient background */
 @utility rapid-gradient {
-  background-image: linear-gradient(135deg, 
-    color-mix(in oklab, #FF6B35 8%, transparent),
-    color-mix(in oklab, #D62E1F 5%, transparent)
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in oklab, #ff6b35 8%, transparent),
+    color-mix(in oklab, #d62e1f 5%, transparent)
   );
 }
 
 /* Urgent border with glow */
 @utility urgent-border {
-  border-color: color-mix(in oklab, #FF6B35 50%, transparent);
-  box-shadow: 0 0 15px color-mix(in oklab, #FF6B35 25%, transparent);
+  border-color: color-mix(in oklab, #ff6b35 50%, transparent);
+  box-shadow: 0 0 15px color-mix(in oklab, #ff6b35 25%, transparent);
 }
 
 /* Rapid job badge glow effect - applies a glowing aura around badges */
@@ -320,11 +326,11 @@
 }
 
 .rapid-badge-glow::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: -2px;
   border-radius: inherit;
-  background: linear-gradient(135deg, #FF6B35, #D62E1F);
+  background: linear-gradient(135deg, #ff6b35, #d62e1f);
   opacity: 0.2;
   filter: blur(8px);
   animation: rapid-pulse 2s ease-in-out infinite;
@@ -339,17 +345,17 @@
 
 /* Orange color palette for rapid jobs */
 :root {
-  --rapid-orange: #FF6B35;
-  --rapid-orange-light: #FF8A5B;
-  --rapid-orange-dark: #D62E1F;
-  --rapid-orange-glow: color-mix(in oklab, #FF6B35 40%, transparent);
+  --rapid-orange: #ff6b35;
+  --rapid-orange-light: #ff8a5b;
+  --rapid-orange-dark: #d62e1f;
+  --rapid-orange-glow: color-mix(in oklab, #ff6b35 40%, transparent);
 }
 
 .dark {
-  --rapid-orange: #FF8A5B;
-  --rapid-orange-light: #FFA07A;
-  --rapid-orange-dark: #FF6B35;
-  --rapid-orange-glow: color-mix(in oklab, #FF8A5B 45%, transparent);
+  --rapid-orange: #ff8a5b;
+  --rapid-orange-light: #ffa07a;
+  --rapid-orange-dark: #ff6b35;
+  --rapid-orange-glow: color-mix(in oklab, #ff8a5b 45%, transparent);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -382,14 +388,21 @@
 
 /* Position select micro-bounce */
 @keyframes pos-select {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.08); }
-  100% { transform: scale(1.05); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1.05);
+  }
 }
 
 /* Available tile subtle glow pulse */
 @keyframes available-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 transparent;
   }
   50% {
@@ -423,56 +436,112 @@
 
 /* Accordion expand */
 @keyframes accordion-down {
-  from { opacity: 0; max-height: 0; }
-  to   { opacity: 1; max-height: 2000px; }
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 2000px;
+  }
 }
 @keyframes accordion-up {
-  from { opacity: 1; max-height: 2000px; }
-  to   { opacity: 0; max-height: 0; }
+  from {
+    opacity: 1;
+    max-height: 2000px;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+  }
 }
 
 /* Applicant card stagger entrance */
 @keyframes card-enter {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Count number roll */
 @keyframes count-pop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.18); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Success checkmark draw (SVG stroke-dashoffset) */
 @keyframes check-draw {
-  from { stroke-dashoffset: 60; opacity: 0; }
-  to   { stroke-dashoffset: 0;  opacity: 1; }
+  from {
+    stroke-dashoffset: 60;
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
 }
 
 /* Outer ring scale + fade */
 @keyframes ring-pop {
-  0%   { transform: scale(0.7); opacity: 0; }
-  60%  { transform: scale(1.06); opacity: 1; }
-  100% { transform: scale(1);   opacity: 1; }
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Subtle ring pulse after pop — ambient breathing */
 @keyframes ring-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 0%, transparent); }
-  50%       { box-shadow: 0 0 0 10px color-mix(in oklab, var(--success) 12%, transparent); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 10px color-mix(in oklab, var(--success) 12%, transparent);
+  }
 }
 
 /* Content fade-up stagger base */
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Review screen slide in */
 @keyframes review-enter {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -482,7 +551,8 @@
 
 /* Subtle localized badge pulse */
 @keyframes rapid-badge-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.45);
     transform: scale(1);
   }
@@ -512,7 +582,8 @@
 
 /* Subtle availability bar amber shimmer for low/urgent spots */
 @keyframes availability-urgent-shimmer {
-  0%, 100% {
+  0%,
+  100% {
     filter: drop-shadow(0 0 0px transparent);
   }
   50% {
@@ -536,4 +607,3 @@
     scroll-behavior: auto !important;
   }
 }
-

@@ -1,12 +1,12 @@
 /**
  * React Query Hooks for Application Management
- * 
+ *
  * Provides hooks for:
  * - Fetching applications (worker and employer views)
  * - Reserving positions
  * - Confirming bookings
  * - Cancelling applications
- * 
+ *
  * Uses React Query for:
  * - Automatic caching
  * - Background refetching
@@ -14,25 +14,29 @@
  * - Loading/error states
  */
 
-import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
-import { ApplicationService, type Application, type ApplicationStatus } from '../services/application-service';
-import { jobKeys } from './use-jobs';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
+import {
+  ApplicationService,
+  type Application,
+  type ApplicationStatus,
+} from "../services/application-service";
+import { jobKeys } from "./use-jobs";
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
 export const applicationKeys = {
-  all: ['applications'] as const,
-  lists: () => [...applicationKeys.all, 'list'] as const,
-  workerLists: () => [...applicationKeys.lists(), 'worker'] as const,
+  all: ["applications"] as const,
+  lists: () => [...applicationKeys.all, "list"] as const,
+  workerLists: () => [...applicationKeys.lists(), "worker"] as const,
   workerList: (workerId: string, filters?: Record<string, any>) =>
     [...applicationKeys.workerLists(), workerId, filters || {}] as const,
-  jobLists: () => [...applicationKeys.lists(), 'job'] as const,
+  jobLists: () => [...applicationKeys.lists(), "job"] as const,
   jobList: (jobId: string, filters?: Record<string, any>) =>
     [...applicationKeys.jobLists(), jobId, filters || {}] as const,
-  details: () => [...applicationKeys.all, 'detail'] as const,
+  details: () => [...applicationKeys.all, "detail"] as const,
   detail: (id: string) => [...applicationKeys.details(), id] as const,
   availablePositions: (jobId: string, categoryId?: string) =>
-    [...applicationKeys.all, 'available-positions', jobId, categoryId || 'all'] as const,
+    [...applicationKeys.all, "available-positions", jobId, categoryId || "all"] as const,
 };
 
 // ─── Fetch Worker Applications ───────────────────────────────────────────────
@@ -46,17 +50,17 @@ interface UseWorkerApplicationsParams {
 
 export function useWorkerApplications(
   params: UseWorkerApplicationsParams,
-  options?: Omit<UseQueryOptions<Application[], Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<Application[], Error>, "queryKey" | "queryFn">,
 ) {
   return useQuery<Application[], Error>({
-    queryKey: applicationKeys.workerList(params.workerId || '', {
+    queryKey: applicationKeys.workerList(params.workerId || "", {
       status: params.status,
       limit: params.limit,
       offset: params.offset,
     }),
     queryFn: async () => {
       if (!params.workerId) {
-        throw new Error('Worker ID is required');
+        throw new Error("Worker ID is required");
       }
       const result = await ApplicationService.getWorkerApplications({
         workerId: params.workerId,
@@ -85,17 +89,17 @@ interface UseJobApplicationsParams {
 
 export function useJobApplications(
   params: UseJobApplicationsParams,
-  options?: Omit<UseQueryOptions<Application[], Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<Application[], Error>, "queryKey" | "queryFn">,
 ) {
   return useQuery<Application[], Error>({
-    queryKey: applicationKeys.jobList(params.jobId || '', {
+    queryKey: applicationKeys.jobList(params.jobId || "", {
       status: params.status,
       limit: params.limit,
       offset: params.offset,
     }),
     queryFn: async () => {
       if (!params.jobId) {
-        throw new Error('Job ID is required');
+        throw new Error("Job ID is required");
       }
       const result = await ApplicationService.getJobApplications({
         jobId: params.jobId,
@@ -117,13 +121,13 @@ export function useJobApplications(
 
 export function useApplication(
   applicationId: string | undefined,
-  options?: Omit<UseQueryOptions<Application, Error>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<Application, Error>, "queryKey" | "queryFn">,
 ) {
   return useQuery<Application, Error>({
-    queryKey: applicationKeys.detail(applicationId || ''),
+    queryKey: applicationKeys.detail(applicationId || ""),
     queryFn: async () => {
       if (!applicationId) {
-        throw new Error('Application ID is required');
+        throw new Error("Application ID is required");
       }
       const result = await ApplicationService.getApplication(applicationId);
       if (!result.success) {
@@ -143,7 +147,7 @@ export function useHasWorkerApplied(params: {
   jobId: string | undefined;
 }) {
   return useQuery({
-    queryKey: [...applicationKeys.all, 'has-applied', params.workerId, params.jobId],
+    queryKey: [...applicationKeys.all, "has-applied", params.workerId, params.jobId],
     queryFn: async () => {
       if (!params.workerId || !params.jobId) {
         return { hasApplied: false };
@@ -168,10 +172,10 @@ export function useAvailablePositions(params: {
   jobCategoryId?: string | undefined;
 }) {
   return useQuery({
-    queryKey: applicationKeys.availablePositions(params.jobId || '', params.jobCategoryId),
+    queryKey: applicationKeys.availablePositions(params.jobId || "", params.jobCategoryId),
     queryFn: async () => {
       if (!params.jobId) {
-        throw new Error('Job ID is required');
+        throw new Error("Job ID is required");
       }
       const result = await ApplicationService.getAvailablePositions({
         jobId: params.jobId,

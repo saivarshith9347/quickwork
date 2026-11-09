@@ -1,6 +1,6 @@
 /**
  * Supabase Configuration Guard
- * 
+ *
  * Wraps the application and displays a friendly configuration
  * prompt when Supabase credentials are missing.
  */

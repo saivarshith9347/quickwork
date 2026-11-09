@@ -1,11 +1,19 @@
 /**
  * Auth context with phone+OTP, Google, email+OTP support.
  * Now uses REAL Supabase authentication.
- * 
+ *
  * No upfront role choice — every user can both post jobs and find work.
  * After login, profileComplete drives whether /complete-profile is shown.
  */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type { Session, User, AuthError } from "@supabase/supabase-js";
 
@@ -68,42 +76,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = getSupabase();
 
   // ── Fetch user profile from database ──────────────────────────────────────
-  const fetchUserProfile = useCallback(async (authUser: User): Promise<AuthUser> => {
-    if (!supabase) {
-      throw new Error("Supabase not configured");
-    }
+  const fetchUserProfile = useCallback(
+    async (authUser: User): Promise<AuthUser> => {
+      if (!supabase) {
+        throw new Error("Supabase not configured");
+      }
 
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", authUser.id)
-      .single();
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authUser.id)
+        .single();
 
-    if (error && error.code !== "PGRST116") {
-      // PGRST116 = no rows returned (profile doesn't exist yet)
-      console.error("Error fetching profile:", error);
-    }
+      if (error && error.code !== "PGRST116") {
+        // PGRST116 = no rows returned (profile doesn't exist yet)
+        console.error("Error fetching profile:", error);
+      }
 
-    // Generate initials from name
-    const initials = profile?.name
-      ? profile.name
-          .split(" ")
-          .map((n: string) => n[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2)
-      : undefined;
+      // Generate initials from name
+      const initials = profile?.name
+        ? profile.name
+            .split(" ")
+            .map((n: string) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2)
+        : undefined;
 
-    return {
-      id: authUser.id,
-      name: profile?.name || null,
-      phone: profile?.phone || authUser.phone || null,
-      email: profile?.email || authUser.email || null,
-      profileComplete: profile?.profile_complete || false,
-      avatar: profile?.avatar_url || initials,
-      location: profile?.location || undefined,
-    };
-  }, [supabase]);
+      return {
+        id: authUser.id,
+        name: profile?.name || null,
+        phone: profile?.phone || authUser.phone || null,
+        email: profile?.email || authUser.email || null,
+        profileComplete: profile?.profile_complete || false,
+        avatar: profile?.avatar_url || initials,
+        location: profile?.location || undefined,
+      };
+    },
+    [supabase],
+  );
 
   // ── Initialize session on mount ───────────────────────────────────────────
   useEffect(() => {
@@ -150,30 +161,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Real phone+OTP login ──────────────────────────────────────────────────
-  const loginWithPhone = useCallback(async (phone: string, otp: string): Promise<AuthUser> => {
-    if (!supabase) {
-      throw new Error("Supabase not configured");
-    }
+  const loginWithPhone = useCallback(
+    async (phone: string, otp: string): Promise<AuthUser> => {
+      if (!supabase) {
+        throw new Error("Supabase not configured");
+      }
 
-    const { data, error } = await supabase.auth.verifyOtp({
-      phone,
-      token: otp,
-      type: "sms",
-    });
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone,
+        token: otp,
+        type: "sms",
+      });
 
-    if (error) {
-      throw error;
-    }
+      if (error) {
+        throw error;
+      }
 
-    if (!data.user) {
-      throw new Error("No user returned from OTP verification");
-    }
+      if (!data.user) {
+        throw new Error("No user returned from OTP verification");
+      }
 
-    const authUser = await fetchUserProfile(data.user);
-    setUser(authUser);
-    setLoginModalOpen(false);
-    return authUser;
-  }, [supabase, fetchUserProfile]);
+      const authUser = await fetchUserProfile(data.user);
+      setUser(authUser);
+      setLoginModalOpen(false);
+      return authUser;
+    },
+    [supabase, fetchUserProfile],
+  );
 
   // ── Real Google OAuth ─────────────────────────────────────────────────────
   const loginWithGoogle = useCallback(async (): Promise<AuthUser> => {
@@ -199,109 +213,121 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   // ── Real email+OTP login ──────────────────────────────────────────────────
-  const loginWithEmail = useCallback(async (email: string, otp: string): Promise<AuthUser> => {
-    if (!supabase) {
-      throw new Error("Supabase not configured");
-    }
+  const loginWithEmail = useCallback(
+    async (email: string, otp: string): Promise<AuthUser> => {
+      if (!supabase) {
+        throw new Error("Supabase not configured");
+      }
 
-    const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: "email",
-    });
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: "email",
+      });
 
-    if (error) {
-      throw error;
-    }
+      if (error) {
+        throw error;
+      }
 
-    if (!data.user) {
-      throw new Error("No user returned from OTP verification");
-    }
+      if (!data.user) {
+        throw new Error("No user returned from OTP verification");
+      }
 
-    const authUser = await fetchUserProfile(data.user);
-    setUser(authUser);
-    setLoginModalOpen(false);
-    return authUser;
-  }, [supabase, fetchUserProfile]);
+      const authUser = await fetchUserProfile(data.user);
+      setUser(authUser);
+      setLoginModalOpen(false);
+      return authUser;
+    },
+    [supabase, fetchUserProfile],
+  );
 
   // ── Send phone OTP ────────────────────────────────────────────────────────
-  const sendPhoneOTP = useCallback(async (phone: string): Promise<boolean> => {
-    if (!supabase) {
-      throw new Error("Supabase not configured");
-    }
+  const sendPhoneOTP = useCallback(
+    async (phone: string): Promise<boolean> => {
+      if (!supabase) {
+        throw new Error("Supabase not configured");
+      }
 
-    const { error } = await supabase.auth.signInWithOtp({
-      phone,
-    });
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+      });
 
-    if (error) {
-      throw error;
-    }
+      if (error) {
+        throw error;
+      }
 
-    return true;
-  }, [supabase]);
+      return true;
+    },
+    [supabase],
+  );
 
   // ── Send email OTP ────────────────────────────────────────────────────────
-  const sendEmailOTP = useCallback(async (email: string): Promise<boolean> => {
-    if (!supabase) {
-      throw new Error("Supabase not configured");
-    }
+  const sendEmailOTP = useCallback(
+    async (email: string): Promise<boolean> => {
+      if (!supabase) {
+        throw new Error("Supabase not configured");
+      }
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-      },
-    });
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+        },
+      });
 
-    if (error) {
-      throw error;
-    }
+      if (error) {
+        throw error;
+      }
 
-    return true;
-  }, [supabase]);
+      return true;
+    },
+    [supabase],
+  );
 
   // ── Complete profile ──────────────────────────────────────────────────────
-  const completeProfile = useCallback(async (data: Partial<AuthUser>) => {
-    if (!supabase || !user) {
-      throw new Error("Not authenticated");
-    }
+  const completeProfile = useCallback(
+    async (data: Partial<AuthUser>) => {
+      if (!supabase || !user) {
+        throw new Error("Not authenticated");
+      }
 
-    const initials = data.name
-      ? data.name
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2)
-      : undefined;
+      const initials = data.name
+        ? data.name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2)
+        : undefined;
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        name: data.name || null,
-        phone: data.phone || null,
-        location: data.location || null,
-        avatar_url: data.avatar || initials || null,
-        profile_complete: true,
-      })
-      .eq("id", user.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          name: data.name || null,
+          phone: data.phone || null,
+          location: data.location || null,
+          avatar_url: data.avatar || initials || null,
+          profile_complete: true,
+        })
+        .eq("id", user.id);
 
-    if (error) {
-      throw error;
-    }
+      if (error) {
+        throw error;
+      }
 
-    // Update local state
-    setUser((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        ...data,
-        profileComplete: true,
-        avatar: data.avatar || initials,
-      };
-    });
-  }, [supabase, user]);
+      // Update local state
+      setUser((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          ...data,
+          profileComplete: true,
+          avatar: data.avatar || initials,
+        };
+      });
+    },
+    [supabase, user],
+  );
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {

@@ -145,51 +145,246 @@ function buildMockDetail(jobId: string): JobDetail {
     facilities: ["Meals", "Transport", "Uniform"],
     categories: [
       {
-        id: "c1", name: "Food Serving", required_workers: 5, wage: 1200, sort_order: 1,
-        booked: 3, available: 1, pending: 1,
+        id: "c1",
+        name: "Food Serving",
+        required_workers: 5,
+        wage: 1200,
+        sort_order: 1,
+        booked: 3,
+        available: 1,
+        pending: 1,
         positions: [
-          { id: "p1", position_number: 1, status: "BOOKED",    worker_id: "w1", application_id: "a1", lock_expires_at: null, worker: { name: "Rahul K.", avatar_url: null } },
-          { id: "p2", position_number: 2, status: "BOOKED",    worker_id: "w2", application_id: "a2", lock_expires_at: null, worker: { name: "Sana M.", avatar_url: null } },
-          { id: "p3", position_number: 3, status: "BOOKED",    worker_id: "w3", application_id: "a3", lock_expires_at: null, worker: { name: "Arjun R.", avatar_url: null } },
-          { id: "p4", position_number: 4, status: "PENDING",   worker_id: null, application_id: null, lock_expires_at: new Date(now.getTime() + 90000).toISOString(), worker: null },
-          { id: "p5", position_number: 5, status: "AVAILABLE", worker_id: null, application_id: null, lock_expires_at: null, worker: null },
+          {
+            id: "p1",
+            position_number: 1,
+            status: "BOOKED",
+            worker_id: "w1",
+            application_id: "a1",
+            lock_expires_at: null,
+            worker: { name: "Rahul K.", avatar_url: null },
+          },
+          {
+            id: "p2",
+            position_number: 2,
+            status: "BOOKED",
+            worker_id: "w2",
+            application_id: "a2",
+            lock_expires_at: null,
+            worker: { name: "Sana M.", avatar_url: null },
+          },
+          {
+            id: "p3",
+            position_number: 3,
+            status: "BOOKED",
+            worker_id: "w3",
+            application_id: "a3",
+            lock_expires_at: null,
+            worker: { name: "Arjun R.", avatar_url: null },
+          },
+          {
+            id: "p4",
+            position_number: 4,
+            status: "PENDING",
+            worker_id: null,
+            application_id: null,
+            lock_expires_at: new Date(now.getTime() + 90000).toISOString(),
+            worker: null,
+          },
+          {
+            id: "p5",
+            position_number: 5,
+            status: "AVAILABLE",
+            worker_id: null,
+            application_id: null,
+            lock_expires_at: null,
+            worker: null,
+          },
         ],
         applicants: [
-          { id: "a1", worker_id: "w1", job_category_id: "c1", position_id: "p1", status: "ACCEPTED", applied_at: new Date(now.getTime()-3600000).toISOString(), confirmed_at: new Date().toISOString(), worker_note: "5 years event experience.", employer_note: null, categoryName: "Food Serving", positionNumber: 1, worker: { id: "w1", name: "Rahul Kumar", avatar_url: null, phone: "+91 98765 43210" } },
-          { id: "a2", worker_id: "w2", job_category_id: "c1", position_id: "p2", status: "ACCEPTED", applied_at: new Date(now.getTime()-3000000).toISOString(), confirmed_at: new Date().toISOString(), worker_note: "Available full shift.", employer_note: null, categoryName: "Food Serving", positionNumber: 2, worker: { id: "w2", name: "Sana Mirza", avatar_url: null, phone: "+91 98765 43211" } },
-          { id: "a3", worker_id: "w3", job_category_id: "c1", position_id: "p3", status: "ACCEPTED", applied_at: new Date(now.getTime()-2400000).toISOString(), confirmed_at: new Date().toISOString(), worker_note: null, employer_note: null, categoryName: "Food Serving", positionNumber: 3, worker: { id: "w3", name: "Arjun Reddy", avatar_url: null, phone: "+91 98765 43212" } },
-          { id: "a4", worker_id: "w4", job_category_id: "c1", position_id: "p4", status: "PENDING",  applied_at: new Date(now.getTime()-1800000).toISOString(), confirmed_at: null, worker_note: "Ready for any shift.", employer_note: null, categoryName: "Food Serving", worker: { id: "w4", name: "Meena Sharma", avatar_url: null, phone: "+91 98765 43213" } },
-          { id: "a5", worker_id: "w5", job_category_id: "c1", position_id: "p5", status: "PENDING",  applied_at: new Date(now.getTime()-900000).toISOString(), confirmed_at: null, worker_note: "3 years banquet experience. References available.", employer_note: null, categoryName: "Food Serving", worker: { id: "w5", name: "Vikram Singh", avatar_url: null, phone: "+91 98765 43214" } },
+          {
+            id: "a1",
+            worker_id: "w1",
+            job_category_id: "c1",
+            position_id: "p1",
+            status: "ACCEPTED",
+            applied_at: new Date(now.getTime() - 3600000).toISOString(),
+            confirmed_at: new Date().toISOString(),
+            worker_note: "5 years event experience.",
+            employer_note: null,
+            categoryName: "Food Serving",
+            positionNumber: 1,
+            worker: { id: "w1", name: "Rahul Kumar", avatar_url: null, phone: "+91 98765 43210" },
+          },
+          {
+            id: "a2",
+            worker_id: "w2",
+            job_category_id: "c1",
+            position_id: "p2",
+            status: "ACCEPTED",
+            applied_at: new Date(now.getTime() - 3000000).toISOString(),
+            confirmed_at: new Date().toISOString(),
+            worker_note: "Available full shift.",
+            employer_note: null,
+            categoryName: "Food Serving",
+            positionNumber: 2,
+            worker: { id: "w2", name: "Sana Mirza", avatar_url: null, phone: "+91 98765 43211" },
+          },
+          {
+            id: "a3",
+            worker_id: "w3",
+            job_category_id: "c1",
+            position_id: "p3",
+            status: "ACCEPTED",
+            applied_at: new Date(now.getTime() - 2400000).toISOString(),
+            confirmed_at: new Date().toISOString(),
+            worker_note: null,
+            employer_note: null,
+            categoryName: "Food Serving",
+            positionNumber: 3,
+            worker: { id: "w3", name: "Arjun Reddy", avatar_url: null, phone: "+91 98765 43212" },
+          },
+          {
+            id: "a4",
+            worker_id: "w4",
+            job_category_id: "c1",
+            position_id: "p4",
+            status: "PENDING",
+            applied_at: new Date(now.getTime() - 1800000).toISOString(),
+            confirmed_at: null,
+            worker_note: "Ready for any shift.",
+            employer_note: null,
+            categoryName: "Food Serving",
+            worker: { id: "w4", name: "Meena Sharma", avatar_url: null, phone: "+91 98765 43213" },
+          },
+          {
+            id: "a5",
+            worker_id: "w5",
+            job_category_id: "c1",
+            position_id: "p5",
+            status: "PENDING",
+            applied_at: new Date(now.getTime() - 900000).toISOString(),
+            confirmed_at: null,
+            worker_note: "3 years banquet experience. References available.",
+            employer_note: null,
+            categoryName: "Food Serving",
+            worker: { id: "w5", name: "Vikram Singh", avatar_url: null, phone: "+91 98765 43214" },
+          },
         ],
       },
       {
-        id: "c2", name: "Liquor Serving", required_workers: 3, wage: 1400, sort_order: 2,
-        booked: 2, available: 1, pending: 0,
+        id: "c2",
+        name: "Liquor Serving",
+        required_workers: 3,
+        wage: 1400,
+        sort_order: 2,
+        booked: 2,
+        available: 1,
+        pending: 0,
         positions: [
-          { id: "p6", position_number: 1, status: "BOOKED",    worker_id: "w6", application_id: "a6", lock_expires_at: null, worker: { name: "Priya D.", avatar_url: null } },
-          { id: "p7", position_number: 2, status: "BOOKED",    worker_id: "w7", application_id: "a7", lock_expires_at: null, worker: { name: "Dev K.", avatar_url: null } },
-          { id: "p8", position_number: 3, status: "AVAILABLE", worker_id: null, application_id: null, lock_expires_at: null, worker: null },
+          {
+            id: "p6",
+            position_number: 1,
+            status: "BOOKED",
+            worker_id: "w6",
+            application_id: "a6",
+            lock_expires_at: null,
+            worker: { name: "Priya D.", avatar_url: null },
+          },
+          {
+            id: "p7",
+            position_number: 2,
+            status: "BOOKED",
+            worker_id: "w7",
+            application_id: "a7",
+            lock_expires_at: null,
+            worker: { name: "Dev K.", avatar_url: null },
+          },
+          {
+            id: "p8",
+            position_number: 3,
+            status: "AVAILABLE",
+            worker_id: null,
+            application_id: null,
+            lock_expires_at: null,
+            worker: null,
+          },
         ],
         applicants: [],
       },
       {
-        id: "c3", name: "Starters Serving", required_workers: 2, wage: 1200, sort_order: 3,
-        booked: 2, available: 0, pending: 0,
+        id: "c3",
+        name: "Starters Serving",
+        required_workers: 2,
+        wage: 1200,
+        sort_order: 3,
+        booked: 2,
+        available: 0,
+        pending: 0,
         positions: [
-          { id: "p9",  position_number: 1, status: "BOOKED", worker_id: "w8", application_id: "a8", lock_expires_at: null, worker: { name: "Deepa L.", avatar_url: null } },
-          { id: "p10", position_number: 2, status: "BOOKED", worker_id: "w9", application_id: "a9", lock_expires_at: null, worker: { name: "Suresh P.", avatar_url: null } },
+          {
+            id: "p9",
+            position_number: 1,
+            status: "BOOKED",
+            worker_id: "w8",
+            application_id: "a8",
+            lock_expires_at: null,
+            worker: { name: "Deepa L.", avatar_url: null },
+          },
+          {
+            id: "p10",
+            position_number: 2,
+            status: "BOOKED",
+            worker_id: "w9",
+            application_id: "a9",
+            lock_expires_at: null,
+            worker: { name: "Suresh P.", avatar_url: null },
+          },
         ],
         applicants: [],
       },
       {
-        id: "c4", name: "Juice Serving", required_workers: 2, wage: 1100, sort_order: 4,
-        booked: 1, available: 1, pending: 0,
+        id: "c4",
+        name: "Juice Serving",
+        required_workers: 2,
+        wage: 1100,
+        sort_order: 4,
+        booked: 1,
+        available: 1,
+        pending: 0,
         positions: [
-          { id: "p11", position_number: 1, status: "BOOKED",    worker_id: "w10", application_id: "a10", lock_expires_at: null, worker: { name: "Anita K.", avatar_url: null } },
-          { id: "p12", position_number: 2, status: "AVAILABLE", worker_id: null, application_id: null, lock_expires_at: null, worker: null },
+          {
+            id: "p11",
+            position_number: 1,
+            status: "BOOKED",
+            worker_id: "w10",
+            application_id: "a10",
+            lock_expires_at: null,
+            worker: { name: "Anita K.", avatar_url: null },
+          },
+          {
+            id: "p12",
+            position_number: 2,
+            status: "AVAILABLE",
+            worker_id: null,
+            application_id: null,
+            lock_expires_at: null,
+            worker: null,
+          },
         ],
         applicants: [
-          { id: "a11", worker_id: "w11", job_category_id: "c4", position_id: "p12", status: "PENDING", applied_at: new Date(now.getTime()-600000).toISOString(), confirmed_at: null, worker_note: null, employer_note: null, categoryName: "Juice Serving", worker: { id: "w11", name: "Ravi Teja", avatar_url: null, phone: "+91 98765 43215" } },
+          {
+            id: "a11",
+            worker_id: "w11",
+            job_category_id: "c4",
+            position_id: "p12",
+            status: "PENDING",
+            applied_at: new Date(now.getTime() - 600000).toISOString(),
+            confirmed_at: null,
+            worker_note: null,
+            employer_note: null,
+            categoryName: "Juice Serving",
+            worker: { id: "w11", name: "Ravi Teja", avatar_url: null, phone: "+91 98765 43215" },
+          },
         ],
       },
     ],
@@ -208,7 +403,8 @@ async function fetchJobDetail(jobId: string): Promise<JobDetail> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: job, error } = await (client as any)
       .from("jobs")
-      .select(`
+      .select(
+        `
         id, job_title, venue_name, area, city, job_date, start_time, end_time,
         status, is_rapid_job, facilities,
         job_categories (
@@ -223,7 +419,8 @@ async function fetchJobDetail(jobId: string): Promise<JobDetail> {
             worker:public_profiles!applications_worker_id_fkey ( id, name, avatar_url, phone )
           )
         )
-      `)
+      `,
+      )
       .eq("id", jobId)
       .single();
 
@@ -237,8 +434,10 @@ async function fetchJobDetail(jobId: string): Promise<JobDetail> {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((cat: any): CategoryRow => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const positions: PositionRow[] = ((cat.job_positions ?? []) as any[])
-          .sort((a: { position_number: number }, b: { position_number: number }) => a.position_number - b.position_number);
+        const positions: PositionRow[] = ((cat.job_positions ?? []) as any[]).sort(
+          (a: { position_number: number }, b: { position_number: number }) =>
+            a.position_number - b.position_number,
+        );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const applicants: ApplicantRow[] = (cat.applications ?? []) as any[];
         return {
@@ -248,11 +447,14 @@ async function fetchJobDetail(jobId: string): Promise<JobDetail> {
           wage: cat.wage,
           sort_order: cat.sort_order,
           positions,
-          applicants: applicants.map((a) => ({
-            ...a,
-            categoryName: cat.name,
-            positionNumber: positions.find((p) => p.id === a.position_id)?.position_number,
-          } as ApplicantRow)),
+          applicants: applicants.map(
+            (a) =>
+              ({
+                ...a,
+                categoryName: cat.name,
+                positionNumber: positions.find((p) => p.id === a.position_id)?.position_number,
+              }) as ApplicantRow,
+          ),
           booked: positions.filter((p) => p.status === "BOOKED").length,
           available: positions.filter((p) => p.status === "AVAILABLE").length,
           pending: positions.filter((p) => p.status === "PENDING").length,
@@ -283,7 +485,11 @@ async function fetchJobDetail(jobId: string): Promise<JobDetail> {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const TODAY = new Date().toISOString().split("T")[0]!;
-const TOMORROW = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split("T")[0]!; })();
+const TOMORROW = (() => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0]!;
+})();
 
 function fmtDate(iso: string) {
   if (iso === TODAY) return "Today";
@@ -301,7 +507,12 @@ function fmt12(t: string) {
 
 function initials(name: string | null | undefined) {
   if (!name) return "?";
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 function posLabel(n: number, total: number) {
@@ -319,18 +530,58 @@ function timeAgo(iso: string) {
 // ─── Status configs ───────────────────────────────────────────────────────────
 
 const POS_CFG: Record<PositionStatus, { label: string; bg: string; num: string; dot: string }> = {
-  AVAILABLE: { label: "Available", bg: "border-success/30 bg-success/[0.06]",               num: "text-foreground",          dot: "bg-success"                     },
-  PENDING:   { label: "On Hold",   bg: "border-amber-500/35 bg-amber-500/[0.06]",            num: "text-foreground",          dot: "bg-amber-500 animate-pulse"     },
-  BOOKED:    { label: "Booked",    bg: "border-primary/25 bg-primary/[0.06]",                num: "text-primary",             dot: "bg-primary"                     },
-  CANCELLED: { label: "Cancelled", bg: "border-border/40 bg-muted/20 opacity-40",            num: "text-muted-foreground",    dot: "bg-muted-foreground"             },
+  AVAILABLE: {
+    label: "Available",
+    bg: "border-success/30 bg-success/[0.06]",
+    num: "text-foreground",
+    dot: "bg-success",
+  },
+  PENDING: {
+    label: "On Hold",
+    bg: "border-amber-500/35 bg-amber-500/[0.06]",
+    num: "text-foreground",
+    dot: "bg-amber-500 animate-pulse",
+  },
+  BOOKED: {
+    label: "Booked",
+    bg: "border-primary/25 bg-primary/[0.06]",
+    num: "text-primary",
+    dot: "bg-primary",
+  },
+  CANCELLED: {
+    label: "Cancelled",
+    bg: "border-border/40 bg-muted/20 opacity-40",
+    num: "text-muted-foreground",
+    dot: "bg-muted-foreground",
+  },
 };
 
 const APP_CFG: Record<AppStatus, { label: string; badge: string; dot: string }> = {
-  PENDING:   { label: "Pending",   badge: "border-amber-500/35 bg-amber-500/8  text-amber-600 dark:text-amber-400", dot: "bg-amber-500"         },
-  ACCEPTED:  { label: "Accepted",  badge: "border-success/35  bg-success/8    text-success",                        dot: "bg-success"           },
-  REJECTED:  { label: "Rejected",  badge: "border-destructive/30 bg-destructive/8 text-destructive",                dot: "bg-destructive"       },
-  CANCELLED: { label: "Cancelled", badge: "border-border bg-muted text-muted-foreground",                           dot: "bg-muted-foreground"  },
-  COMPLETED: { label: "Completed", badge: "border-border bg-muted text-muted-foreground",                           dot: "bg-muted-foreground"  },
+  PENDING: {
+    label: "Pending",
+    badge: "border-amber-500/35 bg-amber-500/8  text-amber-600 dark:text-amber-400",
+    dot: "bg-amber-500",
+  },
+  ACCEPTED: {
+    label: "Accepted",
+    badge: "border-success/35  bg-success/8    text-success",
+    dot: "bg-success",
+  },
+  REJECTED: {
+    label: "Rejected",
+    badge: "border-destructive/30 bg-destructive/8 text-destructive",
+    dot: "bg-destructive",
+  },
+  CANCELLED: {
+    label: "Cancelled",
+    badge: "border-border bg-muted text-muted-foreground",
+    dot: "bg-muted-foreground",
+  },
+  COMPLETED: {
+    label: "Completed",
+    badge: "border-border bg-muted text-muted-foreground",
+    dot: "bg-muted-foreground",
+  },
 };
 
 // ─── Position tile ────────────────────────────────────────────────────────────
@@ -338,13 +589,23 @@ const APP_CFG: Record<AppStatus, { label: string; badge: string; dot: string }> 
 function PositionTile({ pos, total }: { pos: PositionRow; total: number }) {
   const cfg = POS_CFG[pos.status];
   return (
-    <div className={`flex min-w-[72px] flex-col items-center rounded-xl border-2 p-3 text-center transition-all ${cfg.bg}`}>
+    <div
+      className={`flex min-w-[72px] flex-col items-center rounded-xl border-2 p-3 text-center transition-all ${cfg.bg}`}
+    >
       <span className={`font-display text-xl font-bold leading-none ${cfg.num}`}>
         {posLabel(pos.position_number, total)}
       </span>
-      <span className={`mt-1 flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.14em] ${
-        pos.status === "BOOKED" ? "text-primary/70" : pos.status === "PENDING" ? "text-amber-500/80" : pos.status === "AVAILABLE" ? "text-success/70" : "text-muted-foreground/40"
-      }`}>
+      <span
+        className={`mt-1 flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.14em] ${
+          pos.status === "BOOKED"
+            ? "text-primary/70"
+            : pos.status === "PENDING"
+              ? "text-amber-500/80"
+              : pos.status === "AVAILABLE"
+                ? "text-success/70"
+                : "text-muted-foreground/40"
+        }`}
+      >
         <span className={`size-1.5 rounded-full ${cfg.dot}`} />
         {cfg.label}
       </span>
@@ -389,20 +650,27 @@ function ApplicantCard({
         if (client) {
           if (newStatus === "ACCEPTED") {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (client as any).from("job_positions").update({
-              status: "BOOKED",
-              worker_id: app.worker_id,
-              application_id: app.id,
-              lock_expires_at: null,
-            }).eq("id", app.position_id);
+            await (client as any)
+              .from("job_positions")
+              .update({
+                status: "BOOKED",
+                worker_id: app.worker_id,
+                application_id: app.id,
+                lock_expires_at: null,
+              })
+              .eq("id", app.position_id);
           } else if (newStatus === "REJECTED") {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (client as any).from("job_positions").update({
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-            }).eq("id", app.position_id).eq("worker_id", app.worker_id);
+            await (client as any)
+              .from("job_positions")
+              .update({
+                status: "AVAILABLE",
+                worker_id: null,
+                application_id: null,
+                lock_expires_at: null,
+              })
+              .eq("id", app.position_id)
+              .eq("worker_id", app.worker_id);
           }
         }
       }
@@ -423,12 +691,19 @@ function ApplicantCard({
         {/* Avatar */}
         <div
           className={`relative flex size-12 shrink-0 items-center justify-center rounded-xl font-display text-sm font-bold text-primary-foreground ${
-            app.status === "ACCEPTED" ? "bg-success" : app.status === "REJECTED" ? "bg-muted-foreground" : "bg-primary/80"
+            app.status === "ACCEPTED"
+              ? "bg-success"
+              : app.status === "REJECTED"
+                ? "bg-muted-foreground"
+                : "bg-primary/80"
           }`}
         >
           {initials(app.worker?.name)}
           {app.status === "ACCEPTED" && (
-            <CheckCircle2 className="absolute -bottom-1.5 -right-1.5 size-4 fill-success text-white" aria-hidden="true" />
+            <CheckCircle2
+              className="absolute -bottom-1.5 -right-1.5 size-4 fill-success text-white"
+              aria-hidden="true"
+            />
           )}
         </div>
 
@@ -436,7 +711,9 @@ function ApplicantCard({
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold text-sm">{app.worker?.name ?? "Unknown"}</p>
-            <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold ${cfg.badge}`}>
+            <span
+              className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold ${cfg.badge}`}
+            >
               <span className={`size-1.5 rounded-full ${cfg.dot}`} />
               {cfg.label}
             </span>
@@ -500,7 +777,11 @@ function ApplicantCard({
             onClick={() => act("ACCEPTED")}
             className="flex flex-1 items-center justify-center gap-2 py-3 text-sm font-bold text-success transition-colors hover:bg-success/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset disabled:opacity-50"
           >
-            {acting ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+            {acting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
             Accept
           </button>
         </div>
@@ -508,7 +789,9 @@ function ApplicantCard({
       {(app.status === "ACCEPTED" || app.status === "REJECTED") && (
         <div className="border-t border-border px-4 py-2.5">
           <p className="text-center text-xs text-muted-foreground/70">
-            {app.status === "ACCEPTED" ? "✓ Worker has been notified" : "✗ Worker has been declined"}
+            {app.status === "ACCEPTED"
+              ? "✓ Worker has been notified"
+              : "✗ Worker has been declined"}
           </p>
         </div>
       )}
@@ -546,7 +829,7 @@ function CategorySection({
   const pendingCount = applicants.filter((a) => a.status === "PENDING").length;
 
   function handleUpdate(appId: string, status: AppStatus) {
-    setApplicants((prev) => prev.map((a) => a.id === appId ? { ...a, status } : a));
+    setApplicants((prev) => prev.map((a) => (a.id === appId ? { ...a, status } : a)));
     onAppUpdate(cat.id, appId, status);
   }
 
@@ -582,23 +865,36 @@ function CategorySection({
                 />
               </div>
             </div>
-            <span className={`shrink-0 font-display text-sm font-bold tabular-nums ${
-              pct === 100 ? "text-success" : pct > 0 ? "text-amber-500" : "text-muted-foreground"
-            }`}>
+            <span
+              className={`shrink-0 font-display text-sm font-bold tabular-nums ${
+                pct === 100 ? "text-success" : pct > 0 ? "text-amber-500" : "text-muted-foreground"
+              }`}
+            >
               {cat.booked} / {cat.required_workers} filled
             </span>
           </div>
 
           {/* Counts row */}
           <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-primary" />{cat.booked} booked</span>
-            <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />{cat.pending} on hold</span>
-            <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-success" />{cat.available} open</span>
+            <span className="flex items-center gap-1">
+              <span className="size-1.5 rounded-full bg-primary" />
+              {cat.booked} booked
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+              {cat.pending} on hold
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="size-1.5 rounded-full bg-success" />
+              {cat.available} open
+            </span>
           </div>
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <span className="font-display text-lg font-bold text-primary">₹{cat.wage.toLocaleString("en-IN")}</span>
+          <span className="font-display text-lg font-bold text-primary">
+            ₹{cat.wage.toLocaleString("en-IN")}
+          </span>
           <ChevronDown
             className={`size-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
             aria-hidden="true"
@@ -648,15 +944,18 @@ function CategorySection({
                 ))}
               </div>
             </div>
-          ) : (
-            applicants.length > 0 && appFilter !== "All" ? (
-              <p className="text-sm text-muted-foreground/60">No {appFilter.toLowerCase()} applicants in this category.</p>
-            ) : applicants.length === 0 ? (
-              <p className="text-sm text-muted-foreground/60">
-                No applicants yet. {cat.available > 0 ? `${cat.available} position${cat.available > 1 ? "s" : ""} available.` : ""}
-              </p>
-            ) : null
-          )}
+          ) : applicants.length > 0 && appFilter !== "All" ? (
+            <p className="text-sm text-muted-foreground/60">
+              No {appFilter.toLowerCase()} applicants in this category.
+            </p>
+          ) : applicants.length === 0 ? (
+            <p className="text-sm text-muted-foreground/60">
+              No applicants yet.{" "}
+              {cat.available > 0
+                ? `${cat.available} position${cat.available > 1 ? "s" : ""} available.`
+                : ""}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
@@ -680,13 +979,15 @@ function HireJobPage() {
       setLoading(true);
       const data = await fetchJobDetail(jobId);
       if (!cancelled) {
-        setIsMock(!user?.id || data.id === jobId && jobId.startsWith("mock-") === true);
+        setIsMock(!user?.id || (data.id === jobId && jobId.startsWith("mock-") === true));
         setJob(data);
         setLoading(false);
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
@@ -696,11 +997,13 @@ function HireJobPage() {
       return {
         ...prev,
         categories: prev.categories.map((cat) =>
-          cat.id !== catId ? cat : {
-            ...cat,
-            applicants: cat.applicants.map((a) => a.id === appId ? { ...a, status } : a),
-            booked: status === "ACCEPTED" ? cat.booked + 1 : cat.booked,
-          },
+          cat.id !== catId
+            ? cat
+            : {
+                ...cat,
+                applicants: cat.applicants.map((a) => (a.id === appId ? { ...a, status } : a)),
+                booked: status === "ACCEPTED" ? cat.booked + 1 : cat.booked,
+              },
         ),
       };
     });
@@ -734,9 +1037,13 @@ function HireJobPage() {
     );
   }
 
-  const fillPct = job.totalPositions > 0 ? Math.round((job.filledPositions / job.totalPositions) * 100) : 0;
+  const fillPct =
+    job.totalPositions > 0 ? Math.round((job.filledPositions / job.totalPositions) * 100) : 0;
   const totalApplicants = job.categories.reduce((s, c) => s + c.applicants.length, 0);
-  const pendingApplicants = job.categories.reduce((s, c) => s + c.applicants.filter((a) => a.status === "PENDING").length, 0);
+  const pendingApplicants = job.categories.reduce(
+    (s, c) => s + c.applicants.filter((a) => a.status === "PENDING").length,
+    0,
+  );
 
   const FILTER_TABS: FilterTab[] = ["All", "Pending", "Accepted", "Rejected"];
 
@@ -753,9 +1060,13 @@ function HireJobPage() {
               </Link>
             </Button>
             <div className="hidden h-4 w-px bg-border sm:block" />
-            <span className="truncate text-sm font-semibold text-muted-foreground">{job.job_title}</span>
+            <span className="truncate text-sm font-semibold text-muted-foreground">
+              {job.job_title}
+            </span>
             {isMock && (
-              <span className="ml-auto text-[10px] text-amber-600 dark:text-amber-400 font-medium">Preview</span>
+              <span className="ml-auto text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                Preview
+              </span>
             )}
           </div>
         </div>
@@ -815,15 +1126,37 @@ function HireJobPage() {
           {/* Overall stats */}
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: "Total Positions", value: job.totalPositions,  Icon: Users,      color: "text-foreground" },
-              { label: "Filled",          value: job.filledPositions,  Icon: CheckCircle2, color: "text-success"  },
-              { label: "Applicants",      value: totalApplicants,       Icon: BadgeCheck, color: "text-primary"   },
-              { label: "Pending Review",  value: pendingApplicants,     Icon: Clock,      color: "text-amber-500" },
+              {
+                label: "Total Positions",
+                value: job.totalPositions,
+                Icon: Users,
+                color: "text-foreground",
+              },
+              {
+                label: "Filled",
+                value: job.filledPositions,
+                Icon: CheckCircle2,
+                color: "text-success",
+              },
+              {
+                label: "Applicants",
+                value: totalApplicants,
+                Icon: BadgeCheck,
+                color: "text-primary",
+              },
+              {
+                label: "Pending Review",
+                value: pendingApplicants,
+                Icon: Clock,
+                color: "text-amber-500",
+              },
             ].map(({ label, value, Icon, color }) => (
               <div key={label} className="rounded-2xl border border-border bg-card p-4 text-center">
                 <Icon className={`mx-auto size-5 ${color}`} aria-hidden="true" />
                 <p className={`mt-1.5 font-display text-2xl font-bold ${color}`}>{value}</p>
-                <p className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+                <p className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {label}
+                </p>
               </div>
             ))}
           </div>
@@ -850,10 +1183,14 @@ function HireJobPage() {
           <div className="flex gap-1 overflow-x-auto py-3" style={{ scrollbarWidth: "none" }}>
             {FILTER_TABS.map((f) => {
               const count = job.categories.reduce((s, c) => {
-                const apps = f === "All" ? c.applicants
-                  : f === "Pending" ? c.applicants.filter((a) => a.status === "PENDING")
-                  : f === "Accepted" ? c.applicants.filter((a) => a.status === "ACCEPTED")
-                  : c.applicants.filter((a) => a.status === "REJECTED");
+                const apps =
+                  f === "All"
+                    ? c.applicants
+                    : f === "Pending"
+                      ? c.applicants.filter((a) => a.status === "PENDING")
+                      : f === "Accepted"
+                        ? c.applicants.filter((a) => a.status === "ACCEPTED")
+                        : c.applicants.filter((a) => a.status === "REJECTED");
                 return s + apps.length;
               }, 0);
 
@@ -870,9 +1207,15 @@ function HireJobPage() {
                   }`}
                 >
                   {f}
-                  <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
-                    appFilter === f ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
-                  }`}>{count}</span>
+                  <span
+                    className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
+                      appFilter === f
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {count}
+                  </span>
                 </button>
               );
             })}

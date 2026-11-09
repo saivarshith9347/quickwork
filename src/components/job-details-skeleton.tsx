@@ -1,6 +1,6 @@
 /**
  * Job Details Skeleton
- * 
+ *
  * Loading placeholder for job details page.
  * Matches the layout of the actual job details view.
  */

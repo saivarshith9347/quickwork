@@ -168,11 +168,13 @@ function ProfilePage() {
           Preview badge state
         </div>
         <div className="flex rounded-xl border border-border bg-background p-1">
-          {([
-            ["earned", "Earned"],
-            ["in-progress", "In progress"],
-            ["locked", "Locked"],
-          ] as [VerificationState, string][]).map(([state, label]) => (
+          {(
+            [
+              ["earned", "Earned"],
+              ["in-progress", "In progress"],
+              ["locked", "Locked"],
+            ] as [VerificationState, string][]
+          ).map(([state, label]) => (
             <button
               key={state}
               onClick={() => setVerificationState(state)}
@@ -264,7 +266,10 @@ function ProfilePage() {
                 ].map(([label, passed]) => {
                   const passedBool = passed as boolean;
                   return (
-                    <div key={label as string} className="flex items-center justify-between text-sm">
+                    <div
+                      key={label as string}
+                      className="flex items-center justify-between text-sm"
+                    >
                       <span className="text-muted-foreground">{label as string}</span>
                       {passedBool ? (
                         <CheckCircle2 className="size-4 text-success" />
@@ -288,9 +293,7 @@ function ProfilePage() {
                   </div>
                 ) : verificationState === "in-progress" ? (
                   <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
-                    <p className="text-sm font-semibold text-primary">
-                      Skill assessment pending
-                    </p>
+                    <p className="text-sm font-semibold text-primary">Skill assessment pending</p>
                     <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-background">
                       <div className="h-full w-2/3 rounded-full bg-primary" />
                     </div>

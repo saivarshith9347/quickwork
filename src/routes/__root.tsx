@@ -19,7 +19,6 @@ import { LoginModal } from "@/components/login-modal";
 import { useAutoRapidJobCheck } from "@/lib/use-rapid-job-scheduler";
 import { SupabaseConfigGuard } from "@/components/supabase-config-guard";
 
-
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -171,4 +170,3 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
-

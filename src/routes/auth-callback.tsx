@@ -1,6 +1,6 @@
 /**
  * OAuth Callback Route
- * 
+ *
  * Handles OAuth provider redirects (Google, etc.) after successful authentication.
  * Supabase automatically handles the token exchange, we just need to redirect
  * the user to an appropriate page.

@@ -100,7 +100,6 @@ function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
-
       {/* ── Header ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -142,7 +141,8 @@ function DashboardPage() {
             ))}
           </div>
           <div className="mt-6 flex items-center gap-1.5 text-sm font-semibold text-primary">
-            Browse shifts <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            Browse shifts{" "}
+            <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </div>
         </Link>
 
@@ -169,7 +169,8 @@ function DashboardPage() {
             ))}
           </div>
           <div className="mt-6 flex items-center gap-1.5 text-sm font-semibold text-primary">
-            Post a shift <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            Post a shift{" "}
+            <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </div>
         </Link>
       </div>
@@ -178,14 +179,11 @@ function DashboardPage() {
       <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           { icon: CalendarDays, label: "Shifts worked", value: "14" },
-          { icon: Star,         label: "Rating",        value: "4.9" },
-          { icon: Briefcase,    label: "Jobs posted",   value: "3" },
-          { icon: Users,        label: "Workers hired", value: "22" },
+          { icon: Star, label: "Rating", value: "4.9" },
+          { icon: Briefcase, label: "Jobs posted", value: "3" },
+          { icon: Users, label: "Workers hired", value: "22" },
         ].map(({ icon: Icon, label, value }) => (
-          <div
-            key={label}
-            className="rounded-2xl border border-border bg-surface p-5"
-          >
+          <div key={label} className="rounded-2xl border border-border bg-surface p-5">
             <Icon className="size-5 text-primary" />
             <p className="mt-3 font-display text-2xl font-bold">{value}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
@@ -198,10 +196,7 @@ function DashboardPage() {
         <section>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Your booked shifts</h2>
-            <Link
-              to="/work"
-              className="text-sm font-semibold text-primary hover:underline"
-            >
+            <Link to="/work" className="text-sm font-semibold text-primary hover:underline">
               Browse more →
             </Link>
           </div>
@@ -217,7 +212,9 @@ function DashboardPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold truncate">{s.role}</p>
-                    <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${s.statusColor}`}>
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${s.statusColor}`}
+                    >
                       {s.status}
                     </span>
                   </div>
@@ -243,10 +240,7 @@ function DashboardPage() {
         <section>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Your posted jobs</h2>
-            <Link
-              to="/my-jobs"
-              className="text-sm font-semibold text-primary hover:underline"
-            >
+            <Link to="/my-jobs" className="text-sm font-semibold text-primary hover:underline">
               View all jobs →
             </Link>
           </div>
@@ -262,7 +256,9 @@ function DashboardPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold truncate">{j.role}</p>
-                    <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${j.statusColor}`}>
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${j.statusColor}`}
+                    >
                       {j.status}
                     </span>
                   </div>

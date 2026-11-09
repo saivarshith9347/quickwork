@@ -1,6 +1,6 @@
 /**
  * Error State Component
- * 
+ *
  * Reusable error display with retry functionality.
  * Used for failed API calls, network errors, etc.
  */
@@ -15,12 +15,7 @@ interface ErrorStateProps {
   type?: "network" | "generic" | "notFound";
 }
 
-export function ErrorState({
-  title,
-  description,
-  onRetry,
-  type = "generic",
-}: ErrorStateProps) {
+export function ErrorState({ title, description, onRetry, type = "generic" }: ErrorStateProps) {
   const config = {
     network: {
       icon: WifiOff,
@@ -38,8 +33,7 @@ export function ErrorState({
     generic: {
       icon: AlertCircle,
       defaultTitle: "Something Went Wrong",
-      defaultDescription:
-        "We encountered an error while loading this page. Please try again.",
+      defaultDescription: "We encountered an error while loading this page. Please try again.",
       retryLabel: "Try Again",
     },
   }[type];

@@ -159,34 +159,39 @@ function SuccessPage() {
     // Sequence: ring pops → check draws → content fades up
     const t1 = setTimeout(() => setCheckTriggered(true), 300);
     const t2 = setTimeout(() => setContentVisible(true), 700);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, []);
 
   // ── Fallback mock for preview mode ───────────────────────────────────────
-  const b: ConfirmedBooking = booking ?? ({
-    applicationId: "preview-app-id",
-    positionId: "preview-pos-id",
-    categoryName: "Food Serving",
-    positionNumber: 3,
-    wage: 1200,
-    jobId: "preview-job",
-    jobTitle: "Wedding Event Staff",
-    jobDate: new Date().toISOString().split("T")[0],
-    startTime: "19:00",
-    endTime: "23:00",
-    area: "Gachibowli",
-    venueName: "Grand Sapphire Banquets",
-    isRapidJob: false,
-  } as ConfirmedBooking);
+  const b: ConfirmedBooking =
+    booking ??
+    ({
+      applicationId: "preview-app-id",
+      positionId: "preview-pos-id",
+      categoryName: "Food Serving",
+      positionNumber: 3,
+      wage: 1200,
+      jobId: "preview-job",
+      jobTitle: "Wedding Event Staff",
+      jobDate: new Date().toISOString().split("T")[0],
+      startTime: "19:00",
+      endTime: "23:00",
+      area: "Gachibowli",
+      venueName: "Grand Sapphire Banquets",
+      isRapidJob: false,
+    } as ConfirmedBooking);
 
   const posNum = posLabel(b.positionNumber);
-  const appId = b.applicationId !== "preview-app-id"
-    ? `QW-${b.applicationId.replace(/-/g, "").substring(0, 8).toUpperCase()}`
-    : "QW-PREVIEW";
+  const appId =
+    b.applicationId !== "preview-app-id"
+      ? `QW-${b.applicationId.replace(/-/g, "").substring(0, 8).toUpperCase()}`
+      : "QW-PREVIEW";
 
   return (
     <div className="mx-auto max-w-2xl min-h-screen px-5 pb-16 pt-12 lg:px-8">
-
       {/* ── Success icon ─────────────────────────────────────────────────── */}
       <div className="flex flex-col items-center text-center">
         {/* Ring + check */}
@@ -199,9 +204,7 @@ function SuccessPage() {
             boxShadow: checkTriggered
               ? "0 0 0 0 color-mix(in oklab, var(--success) 0%, transparent)"
               : undefined,
-            animationName: checkTriggered
-              ? "ring-pop, ring-pulse"
-              : "ring-pop",
+            animationName: checkTriggered ? "ring-pop, ring-pulse" : "ring-pop",
             animationDuration: checkTriggered ? "0.55s, 2.8s" : "0.55s",
             animationDelay: checkTriggered ? "0.1s, 0.85s" : "0.1s",
             animationTimingFunction: checkTriggered
@@ -217,9 +220,7 @@ function SuccessPage() {
         {/* Heading */}
         <div
           style={{
-            animation: contentVisible
-              ? "fade-up 0.5s cubic-bezier(0.22,1,0.36,1) both"
-              : "none",
+            animation: contentVisible ? "fade-up 0.5s cubic-bezier(0.22,1,0.36,1) both" : "none",
             opacity: contentVisible ? undefined : 0,
           }}
         >
@@ -232,8 +233,8 @@ function SuccessPage() {
           <p className="mt-1 text-sm text-muted-foreground">{b.jobTitle}</p>
           {b.isRapidJob && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-600 dark:text-orange-400">
-              <span className="inline-block size-2 rounded-full bg-orange-500 animate-pulse" />
-              ⚡ Rapid Job Confirmed
+              <span className="inline-block size-2 rounded-full bg-orange-500 animate-pulse" />⚡
+              Rapid Job Confirmed
             </div>
           )}
         </div>
@@ -243,19 +244,11 @@ function SuccessPage() {
       <div
         className="mt-8 rounded-3xl border border-border bg-card p-6"
         style={{
-          animation: contentVisible
-            ? "fade-up 0.5s cubic-bezier(0.22,1,0.36,1) 80ms both"
-            : "none",
+          animation: contentVisible ? "fade-up 0.5s cubic-bezier(0.22,1,0.36,1) 80ms both" : "none",
           opacity: contentVisible ? undefined : 0,
         }}
       >
-        {b.jobDate && (
-          <InfoRow
-            icon={CalendarDays}
-            label="Date"
-            value={formatDate(b.jobDate)}
-          />
-        )}
+        {b.jobDate && <InfoRow icon={CalendarDays} label="Date" value={formatDate(b.jobDate)} />}
         {b.startTime && b.endTime && (
           <InfoRow
             icon={Clock}
@@ -270,11 +263,7 @@ function SuccessPage() {
             value={b.venueName ? `${b.venueName}, ${b.area}` : b.area}
           />
         )}
-        <InfoRow
-          icon={Briefcase}
-          label="Position"
-          value={`${b.categoryName} · ${posNum}`}
-        />
+        <InfoRow icon={Briefcase} label="Position" value={`${b.categoryName} · ${posNum}`} />
         <InfoRow
           icon={IndianRupee}
           label="Earnings"
@@ -332,26 +321,14 @@ function SuccessPage() {
           opacity: contentVisible ? undefined : 0,
         }}
       >
-        <Button
-          id="view-applications-btn"
-          variant="hero"
-          size="lg"
-          className="w-full"
-          asChild
-        >
+        <Button id="view-applications-btn" variant="hero" size="lg" className="w-full" asChild>
           <Link to="/my-applications">
             <ListChecks className="size-4" aria-hidden="true" />
             View My Applications
           </Link>
         </Button>
 
-        <Button
-          id="find-more-work-btn"
-          variant="outline"
-          size="lg"
-          className="w-full"
-          asChild
-        >
+        <Button id="find-more-work-btn" variant="outline" size="lg" className="w-full" asChild>
           <Link to="/work">
             Find More Work
             <ArrowRight className="size-4" aria-hidden="true" />

@@ -21,9 +21,7 @@ import { supabase, getSupabase } from "./supabase";
 
 // ─── Result types ──────────────────────────────────────────────────────────────
 
-export type ServiceResult<T = void> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+export type ServiceResult<T = void> = { ok: true; data: T } | { ok: false; error: string };
 
 // ─── Position status ───────────────────────────────────────────────────────────
 
@@ -93,9 +91,7 @@ export interface AdjustPositionsResult {
  * Fetch a full stats snapshot for a job (all categories + all positions).
  * Uses the STABLE, read-only fn_get_job_position_stats RPC.
  */
-export async function getJobPositionStats(
-  jobId: string,
-): Promise<ServiceResult<JobPositionStats>> {
+export async function getJobPositionStats(jobId: string): Promise<ServiceResult<JobPositionStats>> {
   const client = getSupabase();
   if (!client) {
     return { ok: false, error: "Supabase client not initialized" };
@@ -160,13 +156,10 @@ export async function adjustCategoryHeadcount(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client as any).rpc(
-    "employer_adjust_category_headcount",
-    {
-      p_category_id: categoryId,
-      p_new_count: newCount,
-    },
-  );
+  const { data, error } = await (client as any).rpc("employer_adjust_category_headcount", {
+    p_category_id: categoryId,
+    p_new_count: newCount,
+  });
 
   if (error) {
     return { ok: false, error: error.message };
@@ -190,19 +183,16 @@ export async function adjustCategoryHeadcount(
  *
  * Returns the number of newly inserted rows.
  */
-export async function fillMissingPositions(
-  categoryId: string,
-): Promise<ServiceResult<number>> {
+export async function fillMissingPositions(categoryId: string): Promise<ServiceResult<number>> {
   const client = getSupabase();
   if (!client) {
     return { ok: false, error: "Supabase client not initialized" };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client as any).rpc(
-    "fn_fill_positions_for_category",
-    { p_category_id: categoryId },
-  );
+  const { data, error } = await (client as any).rpc("fn_fill_positions_for_category", {
+    p_category_id: categoryId,
+  });
 
   if (error) {
     return { ok: false, error: error.message };
@@ -265,19 +255,15 @@ export function subscribeToJobPositions(
         });
       },
     )
-    .on(
-      "broadcast",
-      { event: "position_status_update" },
-      ({ payload }) => {
-        if (payload) {
-          onUpdate({
-            eventType: "UPDATE",
-            newRow: payload as Record<string, unknown>,
-            oldRow: null,
-          });
-        }
-      },
-    )
+    .on("broadcast", { event: "position_status_update" }, ({ payload }) => {
+      if (payload) {
+        onUpdate({
+          eventType: "UPDATE",
+          newRow: payload as Record<string, unknown>,
+          oldRow: null,
+        });
+      }
+    })
     .subscribe();
 
   // 2. Cross-tab synchronization via browser BroadcastChannel (desktop & mobile)
@@ -312,7 +298,9 @@ export function subscribeToJobPositions(
       if (localBc) {
         try {
           localBc.close();
-        } catch {}
+        } catch {
+          // BroadcastChannel cleanup failed
+        }
         localBc = null;
       }
     },
@@ -335,7 +323,7 @@ export function broadcastPositionUpdate(
   },
 ) {
   const client = getSupabase();
-  
+
   // 1. Send via Supabase Realtime broadcast
   if (client) {
     try {
@@ -369,10 +357,14 @@ export function broadcastPositionUpdate(
  */
 export function statusLabel(status: PositionStatus): string {
   switch (status) {
-    case "AVAILABLE": return "Available";
-    case "PENDING":   return "Hold (2 min)";
-    case "BOOKED":    return "Booked";
-    case "CANCELLED": return "Cancelled";
+    case "AVAILABLE":
+      return "Available";
+    case "PENDING":
+      return "Hold (2 min)";
+    case "BOOKED":
+      return "Booked";
+    case "CANCELLED":
+      return "Cancelled";
   }
 }
 
@@ -382,10 +374,14 @@ export function statusLabel(status: PositionStatus): string {
  */
 export function statusColour(status: PositionStatus): string {
   switch (status) {
-    case "AVAILABLE": return "bg-success/15 text-success border-success/30";
-    case "PENDING":   return "bg-gold/15 text-gold-foreground border-gold/40";
-    case "BOOKED":    return "bg-primary/15 text-primary border-primary/30";
-    case "CANCELLED": return "bg-muted text-muted-foreground border-border";
+    case "AVAILABLE":
+      return "bg-success/15 text-success border-success/30";
+    case "PENDING":
+      return "bg-gold/15 text-gold-foreground border-gold/40";
+    case "BOOKED":
+      return "bg-primary/15 text-primary border-primary/30";
+    case "CANCELLED":
+      return "bg-muted text-muted-foreground border-border";
   }
 }
 

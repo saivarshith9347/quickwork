@@ -1,37 +1,37 @@
 /**
  * Application Service - Supabase Integration Layer
- * 
+ *
  * Provides CRUD operations for job applications with proper database persistence.
  * Handles the complete application lifecycle:
  * - Worker applies to job
  * - Position reservation (temporary lock)
  * - Booking confirmation
  * - Application cancellation
- * 
+ *
  * Works with RPC functions for atomic position locking.
  */
 
-import { getSupabase } from '../supabase';
-import type { Database } from '../database.types';
+import { getSupabase } from "../supabase";
+import type { Database } from "../database.types";
 
 // ─── Database Types ───────────────────────────────────────────────────────────
 
-type DbApplication = Database['public']['Tables']['applications']['Row'];
-type DbApplicationInsert = Database['public']['Tables']['applications']['Insert'];
-type DbApplicationUpdate = Database['public']['Tables']['applications']['Update'];
-type DbJobPosition = Database['public']['Tables']['job_positions']['Row'];
+type DbApplication = Database["public"]["Tables"]["applications"]["Row"];
+type DbApplicationInsert = Database["public"]["Tables"]["applications"]["Insert"];
+type DbApplicationUpdate = Database["public"]["Tables"]["applications"]["Update"];
+type DbJobPosition = Database["public"]["Tables"]["job_positions"]["Row"];
 
 // ─── Application Status Types ─────────────────────────────────────────────────
 
 export type ApplicationStatus =
-  | 'PENDING'      // Application submitted, position temporarily locked
-  | 'CONFIRMED'    // Employer confirmed (not used in current flow)
-  | 'BOOKED'       // Worker confirmed/paid, position secured
-  | 'ACCEPTED'     // Alternative term for booked
-  | 'REJECTED'     // Employer rejected
-  | 'CANCELLED'    // Worker or employer cancelled
-  | 'COMPLETED'    // Shift completed
-  | 'EXPIRED';     // Lock expired before confirmation
+  | "PENDING" // Application submitted, position temporarily locked
+  | "CONFIRMED" // Employer confirmed (not used in current flow)
+  | "BOOKED" // Worker confirmed/paid, position secured
+  | "ACCEPTED" // Alternative term for booked
+  | "REJECTED" // Employer rejected
+  | "CANCELLED" // Worker or employer cancelled
+  | "COMPLETED" // Shift completed
+  | "EXPIRED"; // Lock expired before confirmation
 
 // ─── Frontend Application Type ────────────────────────────────────────────────
 
@@ -80,7 +80,7 @@ export class ApplicationService {
    * 1. Reserve position (locks it temporarily for 15 min)
    * 2. Worker proceeds to checkout
    * 3. After payment, confirm booking
-   * 
+   *
    * Uses RPC function for atomic operation.
    */
   static async reservePosition(params: {
@@ -90,39 +90,43 @@ export class ApplicationService {
     jobCategoryId?: string | undefined;
     workerNote?: string | undefined;
   }): Promise<
-    | { success: true; positionId: string; lockExpiresAt: string }
-    | { success: false; error: string }
+    { success: true; positionId: string; lockExpiresAt: string } | { success: false; error: string }
   > {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
       // Call RPC function to reserve position atomically
-      const { data, error } = await supabase.rpc('reserve_position', {
+      const { data, error } = await supabase.rpc("reserve_position", {
         p_position_id: params.positionId,
       });
 
       if (error) {
-        console.error('Failed to reserve position:', error);
+        console.error("Failed to reserve position:", error);
         return { success: false, error: error.message };
       }
 
-      const res = data as { success?: boolean; error?: string; lock_expires_at?: string; position_id?: string } | null;
+      const res = data as {
+        success?: boolean;
+        error?: string;
+        lock_expires_at?: string;
+        position_id?: string;
+      } | null;
 
       if (!res || !res.success) {
-        return { success: false, error: res?.error || 'Failed to reserve position' };
+        return { success: false, error: res?.error || "Failed to reserve position" };
       }
 
       return {
         success: true,
         positionId: params.positionId,
-        lockExpiresAt: res.lock_expires_at || '',
+        lockExpiresAt: res.lock_expires_at || "",
       };
     } catch (error) {
-      console.error('Exception reserving position:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception reserving position:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -130,32 +134,32 @@ export class ApplicationService {
    * Release a reserved position lock.
    */
   static async releasePosition(
-    positionId: string
+    positionId: string,
   ): Promise<{ success: true } | { success: false; error: string }> {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
-      const { data, error } = await supabase.rpc('release_position', {
+      const { data, error } = await supabase.rpc("release_position", {
         p_position_id: positionId,
       });
 
       if (error) {
-        console.error('Failed to release position:', error);
+        console.error("Failed to release position:", error);
         return { success: false, error: error.message };
       }
 
       const res = data as { success?: boolean; error?: string } | null;
       if (!res || !res.success) {
-        return { success: false, error: res?.error || 'Failed to release position' };
+        return { success: false, error: res?.error || "Failed to release position" };
       }
 
       return { success: true };
     } catch (error) {
-      console.error('Exception releasing position:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception releasing position:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -171,49 +175,49 @@ export class ApplicationService {
   }): Promise<{ success: true; applicationId: string } | { success: false; error: string }> {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
       let positionId = params.positionId;
       if (!positionId && params.applicationId) {
         const { data: application, error: appError } = await supabase
-          .from('applications')
-          .select('position_id')
-          .eq('id', params.applicationId)
+          .from("applications")
+          .select("position_id")
+          .eq("id", params.applicationId)
           .single();
 
         if (appError || !application) {
-          return { success: false, error: appError?.message || 'Application not found' };
+          return { success: false, error: appError?.message || "Application not found" };
         }
         positionId = application.position_id;
       }
 
       if (!positionId) {
-        return { success: false, error: 'Position ID is required' };
+        return { success: false, error: "Position ID is required" };
       }
 
       // Call RPC function to confirm booking atomically
-      const { data, error } = await supabase.rpc('confirm_booking', {
+      const { data, error } = await supabase.rpc("confirm_booking", {
         p_position_id: positionId,
         ...(params.workerNote ? { p_worker_note: params.workerNote } : {}),
       });
 
       if (error) {
-        console.error('Failed to confirm booking:', error);
+        console.error("Failed to confirm booking:", error);
         return { success: false, error: error.message };
       }
 
       const res = data as { success?: boolean; error?: string; application_id?: string } | null;
 
       if (!res || !res.success) {
-        return { success: false, error: res?.error || 'Failed to confirm booking' };
+        return { success: false, error: res?.error || "Failed to confirm booking" };
       }
 
-      return { success: true, applicationId: res.application_id || params.applicationId || '' };
+      return { success: true, applicationId: res.application_id || params.applicationId || "" };
     } catch (error) {
-      console.error('Exception confirming booking:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception confirming booking:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -222,33 +226,33 @@ export class ApplicationService {
    * Uses RPC function for atomic operation.
    */
   static async cancelApplication(
-    applicationId: string
+    applicationId: string,
   ): Promise<{ success: true } | { success: false; error: string }> {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
-      const { data, error } = await supabase.rpc('cancel_application', {
+      const { data, error } = await supabase.rpc("cancel_application", {
         p_application_id: applicationId,
       });
 
       if (error) {
-        console.error('Failed to cancel application:', error);
+        console.error("Failed to cancel application:", error);
         return { success: false, error: error.message };
       }
 
       const res = data as { success?: boolean; error?: string } | null;
 
       if (!res || !res.success) {
-        return { success: false, error: res?.error || 'Failed to cancel application' };
+        return { success: false, error: res?.error || "Failed to cancel application" };
       }
 
       return { success: true };
     } catch (error) {
-      console.error('Exception cancelling application:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception cancelling application:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -256,28 +260,28 @@ export class ApplicationService {
    * Get a single application by ID.
    */
   static async getApplication(
-    applicationId: string
+    applicationId: string,
   ): Promise<{ success: true; application: Application } | { success: false; error: string }> {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
       const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .eq('id', applicationId)
+        .from("applications")
+        .select("*")
+        .eq("id", applicationId)
         .single();
 
       if (error || !data) {
-        return { success: false, error: error?.message || 'Application not found' };
+        return { success: false, error: error?.message || "Application not found" };
       }
 
       return { success: true, application: dbApplicationToApplication(data) };
     } catch (error) {
-      console.error('Exception fetching application:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception fetching application:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -289,27 +293,30 @@ export class ApplicationService {
     status?: ApplicationStatus | ApplicationStatus[] | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
-  }): Promise<{ success: true; applications: Application[]; total: number } | { success: false; error: string }> {
+  }): Promise<
+    | { success: true; applications: Application[]; total: number }
+    | { success: false; error: string }
+  > {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
       let query = supabase
-        .from('applications')
-        .select('*', { count: 'exact' })
-        .eq('worker_id', params.workerId);
+        .from("applications")
+        .select("*", { count: "exact" })
+        .eq("worker_id", params.workerId);
 
       if (params.status) {
         if (Array.isArray(params.status)) {
-          query = query.in('status', params.status);
+          query = query.in("status", params.status);
         } else {
-          query = query.eq('status', params.status);
+          query = query.eq("status", params.status);
         }
       }
 
-      query = query.order('applied_at', { ascending: false });
+      query = query.order("applied_at", { ascending: false });
 
       if (params.limit) {
         query = query.limit(params.limit);
@@ -327,8 +334,8 @@ export class ApplicationService {
       const applications = data?.map(dbApplicationToApplication) || [];
       return { success: true, applications, total: count || applications.length };
     } catch (error) {
-      console.error('Exception fetching worker applications:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception fetching worker applications:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -340,27 +347,30 @@ export class ApplicationService {
     status?: ApplicationStatus | ApplicationStatus[] | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
-  }): Promise<{ success: true; applications: Application[]; total: number } | { success: false; error: string }> {
+  }): Promise<
+    | { success: true; applications: Application[]; total: number }
+    | { success: false; error: string }
+  > {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
       let query = supabase
-        .from('applications')
-        .select('*', { count: 'exact' })
-        .eq('job_id', params.jobId);
+        .from("applications")
+        .select("*", { count: "exact" })
+        .eq("job_id", params.jobId);
 
       if (params.status) {
         if (Array.isArray(params.status)) {
-          query = query.in('status', params.status);
+          query = query.in("status", params.status);
         } else {
-          query = query.eq('status', params.status);
+          query = query.eq("status", params.status);
         }
       }
 
-      query = query.order('applied_at', { ascending: false });
+      query = query.order("applied_at", { ascending: false });
 
       if (params.limit) {
         query = query.limit(params.limit);
@@ -378,8 +388,8 @@ export class ApplicationService {
       const applications = data?.map(dbApplicationToApplication) || [];
       return { success: true, applications, total: count || applications.length };
     } catch (error) {
-      console.error('Exception fetching job applications:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception fetching job applications:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -389,19 +399,22 @@ export class ApplicationService {
   static async hasWorkerApplied(params: {
     workerId: string;
     jobId: string;
-  }): Promise<{ success: true; hasApplied: boolean; applicationId?: string | undefined } | { success: false; error: string }> {
+  }): Promise<
+    | { success: true; hasApplied: boolean; applicationId?: string | undefined }
+    | { success: false; error: string }
+  > {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
       const { data, error } = await supabase
-        .from('applications')
-        .select('id')
-        .eq('worker_id', params.workerId)
-        .eq('job_id', params.jobId)
-        .not('status', 'in', '("CANCELLED","REJECTED","EXPIRED")')
+        .from("applications")
+        .select("id")
+        .eq("worker_id", params.workerId)
+        .eq("job_id", params.jobId)
+        .not("status", "in", '("CANCELLED","REJECTED","EXPIRED")')
         .maybeSingle();
 
       if (error) {
@@ -414,8 +427,8 @@ export class ApplicationService {
         applicationId: data?.id,
       };
     } catch (error) {
-      console.error('Exception checking application status:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception checking application status:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -429,21 +442,21 @@ export class ApplicationService {
   }): Promise<{ success: true; positions: DbJobPosition[] } | { success: false; error: string }> {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
       let query = supabase
-        .from('job_positions')
-        .select('*')
-        .eq('job_id', params.jobId)
-        .eq('status', 'AVAILABLE');
+        .from("job_positions")
+        .select("*")
+        .eq("job_id", params.jobId)
+        .eq("status", "AVAILABLE");
 
       if (params.jobCategoryId) {
-        query = query.eq('job_category_id', params.jobCategoryId);
+        query = query.eq("job_category_id", params.jobCategoryId);
       }
 
-      query = query.order('position_number', { ascending: true });
+      query = query.order("position_number", { ascending: true });
 
       const { data, error } = await query;
 
@@ -453,8 +466,8 @@ export class ApplicationService {
 
       return { success: true, positions: data || [] };
     } catch (error) {
-      console.error('Exception fetching available positions:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception fetching available positions:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -462,24 +475,26 @@ export class ApplicationService {
    * Release expired position locks.
    * This should be called by a scheduled job periodically.
    */
-  static async releaseExpiredLocks(): Promise<{ success: true; releasedCount: number } | { success: false; error: string }> {
+  static async releaseExpiredLocks(): Promise<
+    { success: true; releasedCount: number } | { success: false; error: string }
+  > {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
-      const { data, error } = await supabase.rpc('cleanup_expired_locks');
+      const { data, error } = await supabase.rpc("cleanup_expired_locks");
 
       if (error) {
-        console.error('Failed to release expired locks:', error);
+        console.error("Failed to release expired locks:", error);
         return { success: false, error: error.message };
       }
 
-      return { success: true, releasedCount: typeof data === 'number' ? data : 0 };
+      return { success: true, releasedCount: typeof data === "number" ? data : 0 };
     } catch (error) {
-      console.error('Exception releasing expired locks:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception releasing expired locks:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 
@@ -490,11 +505,11 @@ export class ApplicationService {
   static async updateApplicationStatus(
     applicationId: string,
     status: ApplicationStatus,
-    note?: string
+    note?: string,
   ): Promise<{ success: true } | { success: false; error: string }> {
     const supabase = getSupabase();
     if (!supabase) {
-      return { success: false, error: 'Supabase client not initialized' };
+      return { success: false, error: "Supabase client not initialized" };
     }
 
     try {
@@ -503,11 +518,11 @@ export class ApplicationService {
         updated_at: new Date().toISOString(),
       };
 
-      if (status === 'BOOKED' || status === 'ACCEPTED') {
+      if (status === "BOOKED" || status === "ACCEPTED") {
         updates.confirmed_at = new Date().toISOString();
       }
 
-      if (status === 'CANCELLED') {
+      if (status === "CANCELLED") {
         updates.cancelled_at = new Date().toISOString();
       }
 
@@ -515,10 +530,7 @@ export class ApplicationService {
         updates.employer_note = note;
       }
 
-      const { error } = await supabase
-        .from('applications')
-        .update(updates)
-        .eq('id', applicationId);
+      const { error } = await supabase.from("applications").update(updates).eq("id", applicationId);
 
       if (error) {
         return { success: false, error: error.message };
@@ -526,8 +538,8 @@ export class ApplicationService {
 
       return { success: true };
     } catch (error) {
-      console.error('Exception updating application:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error("Exception updating application:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     }
   }
 }

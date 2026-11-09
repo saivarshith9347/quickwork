@@ -62,11 +62,7 @@ export const Route = createFileRoute("/work/$jobId")({
 
 // ─── Helper functions ─────────────────────────────────────────────────────────
 
-function formatDateLabel(
-  isoDate: string,
-  startTime: string,
-  endTime: string,
-): string {
+function formatDateLabel(isoDate: string, startTime: string, endTime: string): string {
   const date = new Date(isoDate + "T00:00");
   const dayLabel = date.toLocaleDateString("en-IN", {
     weekday: "short",
@@ -87,7 +83,7 @@ function formatDateLabel(
 function shiftDuration(start: string, end: string): string {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
-  let mins = (eh! * 60 + em!) - (sh! * 60 + sm!);
+  let mins = eh! * 60 + em! - (sh! * 60 + sm!);
   if (mins < 0) mins += 24 * 60; // crosses midnight
   const h = Math.floor(mins / 60);
   const m = mins % 60;
@@ -98,7 +94,12 @@ function categoryIcon(name: string) {
   const lower = name.toLowerCase();
   if (lower.includes("food") || lower.includes("starters") || lower.includes("kitchen"))
     return <UtensilsCrossed className="size-4" aria-hidden="true" />;
-  if (lower.includes("liquor") || lower.includes("wine") || lower.includes("beverage") || lower.includes("bar"))
+  if (
+    lower.includes("liquor") ||
+    lower.includes("wine") ||
+    lower.includes("beverage") ||
+    lower.includes("bar")
+  )
     return <Wine className="size-4" aria-hidden="true" />;
   if (lower.includes("juice") || lower.includes("mocktail") || lower.includes("drink"))
     return <Utensils className="size-4" aria-hidden="true" />;
@@ -113,14 +114,14 @@ function categoryIcon(name: string) {
 
 function categoryEmoji(jobCategory: string): string {
   const map: Record<string, string> = {
-    Hospitality:  "🍽",
-    Events:       "🎪",
-    Delivery:     "🚚",
-    Retail:       "🛒",
+    Hospitality: "🍽",
+    Events: "🎪",
+    Delivery: "🚚",
+    Retail: "🛒",
     Construction: "👷",
-    Warehouse:    "📦",
-    Cleaning:     "🧹",
-    Other:        "💼",
+    Warehouse: "📦",
+    Cleaning: "🧹",
+    Other: "💼",
   };
   return map[jobCategory] ?? "💼";
 }
@@ -233,9 +234,7 @@ function CategoryCard({
   const isCatFull = cat.availablePositions === 0;
   const isLow = !isCatFull && cat.availablePositions <= 2;
   const fillPct =
-    cat.requiredWorkers > 0
-      ? Math.round((cat.bookedPositions / cat.requiredWorkers) * 100)
-      : 0;
+    cat.requiredWorkers > 0 ? Math.round((cat.bookedPositions / cat.requiredWorkers) * 100) : 0;
 
   const cardContent = (
     <div
@@ -273,9 +272,7 @@ function CategoryCard({
               )}
             </div>
             {cat.description && (
-              <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
-                {cat.description}
-              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground leading-snug">{cat.description}</p>
             )}
           </div>
         </div>
@@ -317,9 +314,7 @@ function CategoryCard({
 
         {/* Counts */}
         <div className="flex items-center gap-2 text-sm shrink-0">
-          <span className="text-muted-foreground">
-            {cat.requiredWorkers} needed
-          </span>
+          <span className="text-muted-foreground">{cat.requiredWorkers} needed</span>
           <span className="text-muted-foreground/40">·</span>
           <span
             className={`font-bold ${
@@ -339,13 +334,12 @@ function CategoryCard({
       {isLow && !isCatFull && !isJobClosed && (
         <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
           <span className="inline-block size-1.5 rounded-full bg-orange-500 animate-pulse" />
-          Filling fast — {cat.availablePositions} position{cat.availablePositions !== 1 ? "s" : ""} left
+          Filling fast — {cat.availablePositions} position{cat.availablePositions !== 1 ? "s" : ""}{" "}
+          left
         </div>
       )}
       {isCatFull && (
-        <p className="mt-2 text-xs font-semibold text-muted-foreground">
-          All positions filled
-        </p>
+        <p className="mt-2 text-xs font-semibold text-muted-foreground">All positions filled</p>
       )}
     </div>
   );
@@ -407,13 +401,13 @@ function JobDetailsPage() {
   const { data: job, isLoading, error, refetch } = useJob(jobId);
   const { data: categories } = useJobCategories(jobId);
   const { data: positions } = useJobPositions(jobId);
-  
+
   // Check if worker has already applied
   const { data: applicationStatus } = useHasWorkerApplied({
     workerId: user?.id,
     jobId,
   });
-  
+
   const alreadyApplied = applicationStatus?.hasApplied || false;
 
   // Fetch the worker's application details if applied
@@ -421,25 +415,28 @@ function JobDetailsPage() {
     enabled: !!applicationStatus?.applicationId,
   });
 
-  const isConfirmed = myApplication?.status === 'BOOKED' || myApplication?.status === 'ACCEPTED';
+  const isConfirmed = myApplication?.status === "BOOKED" || myApplication?.status === "ACCEPTED";
 
   // Calculate available/booked positions from categories and positions data
-  const workCategories = categories?.map(cat => {
-    const catPositions = positions?.filter(p => p.job_category_id === cat.id) || [];
-    const booked = catPositions.filter(p => p.status === 'BOOKED' || p.status === 'ACCEPTED').length;
-    const available = catPositions.filter(p => p.status === 'AVAILABLE').length;
-    
-    return {
-      id: cat.id,
-      name: cat.name,
-      wage: cat.wage,
-      requiredWorkers: cat.required_workers,
-      availablePositions: available,
-      bookedPositions: booked,
-      description: cat.description,
-      sortOrder: cat.sort_order,
-    };
-  }) || [];
+  const workCategories =
+    categories?.map((cat) => {
+      const catPositions = positions?.filter((p) => p.job_category_id === cat.id) || [];
+      const booked = catPositions.filter(
+        (p) => p.status === "BOOKED" || p.status === "ACCEPTED",
+      ).length;
+      const available = catPositions.filter((p) => p.status === "AVAILABLE").length;
+
+      return {
+        id: cat.id,
+        name: cat.name,
+        wage: cat.wage,
+        requiredWorkers: cat.required_workers,
+        availablePositions: available,
+        bookedPositions: booked,
+        description: cat.description,
+        sortOrder: cat.sort_order,
+      };
+    }) || [];
 
   function handleApply() {
     if (!isLoggedIn) {
@@ -477,24 +474,23 @@ function JobDetailsPage() {
   const isJobClosed = isCancelled || isExpired || isCutoff;
 
   // Extract location fields
-  const location = typeof job.location === 'object' ? job.location : {
-    venueName: formatLocation(job.location, 'short'),
-    fullAddress: job.location,
-    area: formatLocation(job.location, 'short'),
-    city: '',
-    landmark: undefined,
-  };
+  const location =
+    typeof job.location === "object"
+      ? job.location
+      : {
+          venueName: formatLocation(job.location, "short"),
+          fullAddress: job.location,
+          area: formatLocation(job.location, "short"),
+          city: "",
+          landmark: undefined,
+        };
 
   const distanceInfo = getDistanceToJob(location.area);
   const dateLabel = formatDateLabel(job.date, job.startTime, job.endTime);
   const duration = shiftDuration(job.startTime, job.endTime);
 
-  const minWage = workCategories.length > 0
-    ? Math.min(...workCategories.map((c) => c.wage))
-    : 0;
-  const maxWage = workCategories.length > 0
-    ? Math.max(...workCategories.map((c) => c.wage))
-    : 0;
+  const minWage = workCategories.length > 0 ? Math.min(...workCategories.map((c) => c.wage)) : 0;
+  const maxWage = workCategories.length > 0 ? Math.max(...workCategories.map((c) => c.wage)) : 0;
 
   const wageText =
     minWage === maxWage || maxWage === 0
@@ -508,7 +504,6 @@ function JobDetailsPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen pb-32 lg:pb-0">
-
       {/* ── Topbar ─────────────────────────────────────────────────────────── */}
       <div className="border-b border-border bg-surface/95 backdrop-blur-sm sticky top-0 z-20">
         <div className="mx-auto max-w-5xl px-4 py-3 lg:px-8">
@@ -533,7 +528,6 @@ function JobDetailsPage() {
         <div className="mx-auto max-w-5xl px-4 py-8 lg:px-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-
               {/* Rapid badge */}
               {job.isRapidJob && (
                 <div className="mb-3">
@@ -561,8 +555,7 @@ function JobDetailsPage() {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary">
                   <span aria-hidden="true">{categoryEmoji(job.category)}</span>
-                  {JOB_CATEGORY_LABELS[job.category as JobCategoryValue] ??
-                    job.category}
+                  {JOB_CATEGORY_LABELS[job.category as JobCategoryValue] ?? job.category}
                 </span>
                 {job.isRapidJob && (
                   <span className="inline-flex items-center gap-1 rounded-xl border border-orange-500/40 bg-orange-500/10 px-3 py-1.5 text-sm font-bold text-orange-600 dark:text-orange-400">
@@ -588,7 +581,9 @@ function JobDetailsPage() {
                   {distanceInfo.distanceDisplay && (
                     <>
                       &nbsp;·&nbsp;
-                      <span className="font-semibold text-foreground/80">{distanceInfo.distanceDisplay}</span>
+                      <span className="font-semibold text-foreground/80">
+                        {distanceInfo.distanceDisplay}
+                      </span>
                     </>
                   )}
                 </span>
@@ -607,7 +602,8 @@ function JobDetailsPage() {
                 <div className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm font-semibold text-destructive flex items-center gap-2.5">
                   <Clock className="size-5 shrink-0" aria-hidden="true" />
                   <span>
-                    Applications Closed: This rapid job has reached its cutoff time. No new applications can be accepted.
+                    Applications Closed: This rapid job has reached its cutoff time. No new
+                    applications can be accepted.
                   </span>
                 </div>
               )}
@@ -642,9 +638,7 @@ function JobDetailsPage() {
               >
                 {wageText}
               </p>
-              <p className="mt-0.5 text-xs font-semibold text-muted-foreground">
-                per shift
-              </p>
+              <p className="mt-0.5 text-xs font-semibold text-muted-foreground">per shift</p>
               {job.isRapidJob && !isJobClosed && (
                 <p className="mt-1 text-[11px] font-bold text-orange-600 dark:text-orange-400">
                   +20% surge pricing
@@ -658,10 +652,8 @@ function JobDetailsPage() {
       {/* ── Main grid ──────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-5xl px-4 py-8 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-
           {/* ── Left column ────────────────────────────────────────────────── */}
           <div className="space-y-10">
-
             {/* Hiring progress */}
             <section
               className={`animate-rise rounded-2xl border-2 p-6 ${
@@ -686,9 +678,7 @@ function JobDetailsPage() {
             {/* Work categories */}
             <Section title="Work Categories" icon={Users} delay={120}>
               {workCategories.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No categories defined for this job.
-                </p>
+                <p className="text-sm text-muted-foreground">No categories defined for this job.</p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {workCategories.map((cat, i) => (
@@ -707,9 +697,7 @@ function JobDetailsPage() {
 
             {/* Description */}
             <Section title="About this shift" icon={Info} delay={220}>
-              <p className="leading-relaxed text-muted-foreground">
-                {job.description}
-              </p>
+              <p className="leading-relaxed text-muted-foreground">{job.description}</p>
             </Section>
 
             {/* Requirements */}
@@ -832,9 +820,7 @@ function JobDetailsPage() {
                         <Phone className="size-4" aria-hidden="true" />
                         <p className="font-semibold text-sm">Reporting Contact</p>
                       </div>
-                      <p className="mt-2 text-sm font-medium">
-                        {job.reportingContact.name}
-                      </p>
+                      <p className="mt-2 text-sm font-medium">{job.reportingContact.name}</p>
                       {job.reportingContact.phone && (
                         <a
                           href={`tel:${job.reportingContact.phone}`}
@@ -873,7 +859,10 @@ function JobDetailsPage() {
                       {isConfirmed ? "Booking Confirmed!" : "Application Submitted"}
                     </h2>
                     <p className="text-xs text-muted-foreground">
-                      Status: <span className="font-semibold text-primary">{myApplication?.status ?? "PENDING"}</span>
+                      Status:{" "}
+                      <span className="font-semibold text-primary">
+                        {myApplication?.status ?? "PENDING"}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -883,12 +872,16 @@ function JobDetailsPage() {
                     <>
                       <p className="text-sm font-bold text-success">Confirmed!</p>
                       <p className="mt-1.5 text-sm text-muted-foreground">
-                        Your booking is confirmed. Check the instructions above for reporting details.
+                        Your booking is confirmed. Check the instructions above for reporting
+                        details.
                       </p>
                       <Button variant="hero" size="lg" className="mt-4" asChild>
                         <Link
                           to="/booking-confirmation/$applicationId"
-                          params={{ applicationId: myApplication?.id ?? applicationStatus?.applicationId ?? "" }}
+                          params={{
+                            applicationId:
+                              myApplication?.id ?? applicationStatus?.applicationId ?? "",
+                          }}
                         >
                           <CheckCircle2 className="size-4" aria-hidden="true" />
                           View Booking Confirmation
@@ -957,9 +950,7 @@ function JobDetailsPage() {
                     <p className="font-medium text-foreground">{location.venueName}</p>
                     <p>{location.fullAddress}</p>
                     <p>{location.city}</p>
-                    {location.landmark && (
-                      <p className="mt-1 text-xs">Near {location.landmark}</p>
-                    )}
+                    {location.landmark && <p className="mt-1 text-xs">Near {location.landmark}</p>}
                   </div>
                 </div>
               </div>
@@ -1042,9 +1033,7 @@ function BookingPanel({
       {/* Wage */}
       <p
         className={`font-display text-3xl font-bold ${
-          job.isRapidJob && !isJobClosed
-            ? "text-orange-600 dark:text-orange-400"
-            : "text-primary"
+          job.isRapidJob && !isJobClosed ? "text-orange-600 dark:text-orange-400" : "text-primary"
         }`}
       >
         {wageText}
@@ -1090,7 +1079,7 @@ function BookingPanel({
         <div className="mt-4 space-y-2">
           {[
             { icon: ShieldCheck, label: "Wage guaranteed before you book" },
-            { icon: Star,         label: "Verified employer" },
+            { icon: Star, label: "Verified employer" },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-2 text-xs text-muted-foreground">
               <Icon className="size-3.5 shrink-0 text-primary" aria-hidden="true" />

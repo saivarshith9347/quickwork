@@ -29,9 +29,12 @@ import { ApplicationService } from "@/lib/services/application-service";
 import { formatLocation } from "@/lib/job-types";
 
 export const Route = createFileRoute("/checkout")({
-  validateSearch: (search: Record<string, unknown>): { applicationId?: string | undefined; jobId?: string | undefined } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { applicationId?: string | undefined; jobId?: string | undefined } => {
     return {
-      applicationId: typeof search["applicationId"] === "string" ? search["applicationId"] : undefined,
+      applicationId:
+        typeof search["applicationId"] === "string" ? search["applicationId"] : undefined,
       jobId: typeof search["jobId"] === "string" ? search["jobId"] : undefined,
     };
   },
@@ -40,8 +43,7 @@ export const Route = createFileRoute("/checkout")({
       { title: "Check Out — QuickWork" },
       {
         name: "description",
-        content:
-          "Confirm shift completion and track your UPI payment status on QuickWork.",
+        content: "Confirm shift completion and track your UPI payment status on QuickWork.",
       },
     ],
   }),
@@ -143,9 +145,7 @@ function PaymentCard({
       aria-live="polite"
       aria-label={`Payment status: ${status}`}
       className={`relative overflow-hidden rounded-3xl border p-8 transition-all duration-500 ${
-        isSettlementPending
-          ? "border-primary/40 bg-primary/5"
-          : "border-border bg-surface"
+        isSettlementPending ? "border-primary/40 bg-primary/5" : "border-border bg-surface"
       }`}
     >
       <div className="relative">
@@ -153,16 +153,10 @@ function PaymentCard({
         <div className="flex items-center gap-4">
           <div
             className={`flex size-16 items-center justify-center rounded-2xl transition-all duration-500 ${
-              isSettlementPending
-                ? "bg-primary/15 text-primary"
-                : "bg-muted text-muted-foreground"
+              isSettlementPending ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
             }`}
           >
-            {isSettlementPending ? (
-              <Clock className="size-8" />
-            ) : (
-              <Wallet className="size-8" />
-            )}
+            {isSettlementPending ? <Clock className="size-8" /> : <Wallet className="size-8" />}
           </div>
 
           <div>
@@ -174,7 +168,9 @@ function PaymentCard({
                 isSettlementPending ? "text-primary" : "text-foreground"
               }`}
             >
-              {isSettlementPending ? "Shift Completed · Settlement Pending" : "Pending Confirmation"}
+              {isSettlementPending
+                ? "Shift Completed · Settlement Pending"
+                : "Pending Confirmation"}
             </p>
           </div>
         </div>
@@ -197,8 +193,7 @@ function PaymentCard({
           <div className="flex items-center gap-2.5 text-sm">
             <CheckCircle2 className="size-4 text-primary shrink-0" />
             <span className="text-muted-foreground">
-              Designated account:{" "}
-              <span className="font-semibold text-foreground">{workerUpi}</span>
+              Designated account: <span className="font-semibold text-foreground">{workerUpi}</span>
             </span>
           </div>
           <div className="flex items-center gap-2.5 text-sm">
@@ -214,7 +209,9 @@ function PaymentCard({
         <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-muted-foreground flex items-start gap-2.5">
           <Info className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <span>
-            Payment Gateway Notice: Direct in-app automated UPI disbursal is currently in sandbox/manual mode. The employer verifies attendance and completes payment settlement directly.
+            Payment Gateway Notice: Direct in-app automated UPI disbursal is currently in
+            sandbox/manual mode. The employer verifies attendance and completes payment settlement
+            directly.
           </span>
         </div>
       </div>
@@ -239,9 +236,26 @@ function CheckoutPage() {
   const displayShift = {
     role: job?.jobTitle ?? shift.role,
     employer: "QuickWork Verified Employer",
-    venue: typeof job?.location === 'object' ? job.location.venueName : (job ? formatLocation(job.location, 'short') : shift.venue),
-    area: typeof job?.location === 'object' ? job.location.area : (job ? formatLocation(job.location, 'short') : shift.area),
-    date: job ? new Date(job.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : shift.date,
+    venue:
+      typeof job?.location === "object"
+        ? job.location.venueName
+        : job
+          ? formatLocation(job.location, "short")
+          : shift.venue,
+    area:
+      typeof job?.location === "object"
+        ? job.location.area
+        : job
+          ? formatLocation(job.location, "short")
+          : shift.area,
+    date: job
+      ? new Date(job.date).toLocaleDateString("en-IN", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : shift.date,
     checkIn: job?.startTime ?? shift.checkIn,
     checkOut: job?.endTime ?? shift.checkOut,
     hoursWorked: shift.hoursWorked,
@@ -256,7 +270,7 @@ function CheckoutPage() {
   async function handleConfirmCheckout() {
     setIsSubmitting(true);
     if (applicationId) {
-      await ApplicationService.updateApplicationStatus(applicationId, 'COMPLETED');
+      await ApplicationService.updateApplicationStatus(applicationId, "COMPLETED");
     }
     setPhase("payment");
     setPayStatus("manual_settlement");
@@ -273,9 +287,7 @@ function CheckoutPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-primary">Shift complete</p>
-            <h1 className="mt-2 text-4xl font-bold font-display sm:text-5xl">
-              Check out
-            </h1>
+            <h1 className="mt-2 text-4xl font-bold font-display sm:text-5xl">Check out</h1>
             <p className="mt-3 text-muted-foreground">
               Review your shift summary and confirm to release payment.
             </p>
@@ -350,8 +362,8 @@ function CheckoutPage() {
           </h3>
           <p className="mt-2 text-sm text-muted-foreground">
             By confirming, you acknowledge that{" "}
-            <span className="font-semibold text-foreground">{displayShift.workerName}</span> completed
-            this shift and authorise the UPI payment of{" "}
+            <span className="font-semibold text-foreground">{displayShift.workerName}</span>{" "}
+            completed this shift and authorise the UPI payment of{" "}
             <span className="font-semibold text-primary">
               ₹{displayShift.wagePerShift.toLocaleString("en-IN")}
             </span>{" "}
@@ -388,11 +400,7 @@ function CheckoutPage() {
             onClick={handleConfirmCheckout}
             aria-disabled={!confirmed || isSubmitting}
           >
-            {isSubmitting ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <CheckCircle2 />
-            )}
+            {isSubmitting ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
             Confirm check-out &amp; release payment
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
@@ -410,9 +418,7 @@ function CheckoutPage() {
       {/* Header */}
       <div>
         <p className="text-sm font-semibold text-primary">Settlement</p>
-        <h1 className="mt-2 text-4xl font-bold font-display sm:text-5xl">
-          Shift Completed
-        </h1>
+        <h1 className="mt-2 text-4xl font-bold font-display sm:text-5xl">Shift Completed</h1>
         <p className="mt-3 text-muted-foreground">
           Shift completion confirmed and submitted for payout review. Great work today.
         </p>
@@ -436,7 +442,9 @@ function CheckoutPage() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate">{displayShift.role}</p>
-          <p className="text-xs text-muted-foreground truncate">{displayShift.employer} · {displayShift.date}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {displayShift.employer} · {displayShift.date}
+          </p>
         </div>
         <span className="font-display text-xl font-bold text-primary">
           ₹{displayShift.wagePerShift.toLocaleString("en-IN")}

@@ -1,6 +1,6 @@
 /**
  * Rapid Job Notification System
- * 
+ *
  * Handles push notifications for eligible workers when a Rapid Job is posted.
  * Only notifies workers who match specific criteria to avoid spam.
  */
@@ -60,19 +60,19 @@ export type WorkerResponse = {
 const NOTIFICATION_CONFIG = {
   // Maximum distance to notify workers (in kilometers)
   MAX_NOTIFICATION_DISTANCE_KM: 10,
-  
+
   // Minimum rating for workers to receive notifications
   MIN_WORKER_RATING: 3.5,
-  
+
   // Maximum number of workers to notify per job
   MAX_WORKERS_TO_NOTIFY: 50,
-  
+
   // Priority boost for verified workers
   VERIFIED_PRIORITY_BOOST: 0.5,
-  
+
   // Reminder notification delay (in milliseconds)
   REMINDER_DELAY_MS: 15 * 60 * 1000, // 15 minutes
-  
+
   // Minimum unfilled positions to trigger reminder
   MIN_UNFILLED_FOR_REMINDER: 1,
 };
@@ -196,20 +196,20 @@ function logNotification(notification: RapidJobNotification): void {
 export function recordWorkerResponse(
   workerId: string,
   jobId: string,
-  action: "applied" | "dismissed" | "viewed"
+  action: "applied" | "dismissed" | "viewed",
 ): void {
   const key = `${jobId}`;
   const existing = workerResponses.get(key) || [];
-  
+
   existing.push({
     workerId,
     jobId,
     action,
     timestamp: new Date(),
   });
-  
+
   workerResponses.set(key, existing);
-  
+
   console.log(`📝 Recorded response: ${workerId} ${action} job ${jobId}`);
 }
 
@@ -218,7 +218,7 @@ export function recordWorkerResponse(
  */
 function getRespondedWorkers(jobId: string): Set<string> {
   const responses = workerResponses.get(jobId) || [];
-  return new Set(responses.map(r => r.workerId));
+  return new Set(responses.map((r) => r.workerId));
 }
 
 /**
@@ -226,7 +226,7 @@ function getRespondedWorkers(jobId: string): Set<string> {
  */
 function getNotifiedWorkers(jobId: string): Set<string> {
   const notifications = notificationLog.get(jobId) || [];
-  return new Set(notifications.map(n => n.workerId));
+  return new Set(notifications.map((n) => n.workerId));
 }
 
 // ─── Helper Functions ─────────────────────────────────────────────────────────
@@ -235,22 +235,14 @@ function getNotifiedWorkers(jobId: string): Set<string> {
  * Calculate distance between two points using Haversine formula
  * Returns distance in kilometers
  */
-function calculateDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371; // Earth's radius in km
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
@@ -335,10 +327,7 @@ function isWorkerEligible(worker: WorkerProfile, job: BaseJob, distance: number)
  * Calculate priority score for a worker
  * Higher score = higher priority for notification
  */
-function calculateWorkerPriority(
-  worker: WorkerProfile,
-  distance: number
-): number {
+function calculateWorkerPriority(worker: WorkerProfile, distance: number): number {
   let score = 0;
 
   // Rating contribution (0-50 points)
@@ -386,7 +375,7 @@ export function findEligibleWorkers(job: BaseJob): Array<{
       jobLocation.lat,
       jobLocation.lng,
       worker.location.lat,
-      worker.location.lng
+      worker.location.lng,
     );
 
     if (isWorkerEligible(worker, job, distance)) {
@@ -409,12 +398,12 @@ export function findEligibleWorkers(job: BaseJob): Array<{
 function getJobLocationCoordinates(area: string): { lat: number; lng: number } {
   // Mock coordinates for different areas in Bangalore
   const areaCoordinates: Record<string, { lat: number; lng: number }> = {
-    "Koramangala": { lat: 12.9352, lng: 77.6245 },
-    "Indiranagar": { lat: 12.9716, lng: 77.6412 },
-    "Whitefield": { lat: 12.9698, lng: 77.7499 },
+    Koramangala: { lat: 12.9352, lng: 77.6245 },
+    Indiranagar: { lat: 12.9716, lng: 77.6412 },
+    Whitefield: { lat: 12.9698, lng: 77.7499 },
     "MG Road": { lat: 12.9759, lng: 77.6061 },
     "Electronic City": { lat: 12.8456, lng: 77.6603 },
-    "Jayanagar": { lat: 12.9250, lng: 77.5838 },
+    Jayanagar: { lat: 12.925, lng: 77.5838 },
   };
 
   return areaCoordinates[area] || { lat: 12.9716, lng: 77.5946 }; // Default to city center
@@ -428,11 +417,11 @@ async function sendPushNotification(
   worker: WorkerProfile,
   job: BaseJob,
   distance: number,
-  isReminder: boolean = false
+  isReminder: boolean = false,
 ): Promise<boolean> {
   try {
     const notification = {
-      title: isReminder 
+      title: isReminder
         ? `⏰ Reminder: ${job.jobTitle} Still Available`
         : `⚡ Rapid Job Alert: ${job.jobTitle}`,
       body: isReminder
@@ -446,7 +435,7 @@ async function sendPushNotification(
         startTime: formatStartTime(job.date, job.startTime),
         wage: `₹${job.wage}`,
         distance: `${distance} km`,
-        venueName: isStructuredLocation(job.location) ? job.location.venueName : 'Venue',
+        venueName: isStructuredLocation(job.location) ? job.location.venueName : "Venue",
         area: getLocationArea(job.location),
         type: isReminder ? "rapid_job_reminder" : "rapid_job",
         isReminder: isReminder.toString(),
@@ -459,8 +448,11 @@ async function sendPushNotification(
 
     // In real app, would call FCM/APNS:
     // await sendToDevice(worker.pushToken, notification);
-    
-    console.log(`📱 ${isReminder ? "REMINDER" : "Notification"} sent to ${worker.name}:`, notification.title);
+
+    console.log(
+      `📱 ${isReminder ? "REMINDER" : "Notification"} sent to ${worker.name}:`,
+      notification.title,
+    );
 
     return true;
   } catch (error) {
@@ -474,7 +466,7 @@ async function sendPushNotification(
  */
 export async function notifyEligibleWorkers(
   job: BaseJob,
-  isReminder: boolean = false
+  isReminder: boolean = false,
 ): Promise<{
   totalNotified: number;
   notifications: RapidJobNotification[];
@@ -497,24 +489,26 @@ export async function notifyEligibleWorkers(
   let workersToNotify = eligible;
   if (isReminder) {
     const respondedWorkers = getRespondedWorkers(job.id);
-    workersToNotify = eligible.filter(
-      ({ worker }) => !respondedWorkers.has(worker.id)
-    );
+    workersToNotify = eligible.filter(({ worker }) => !respondedWorkers.has(worker.id));
 
     console.log(`\n⏰ REMINDER NOTIFICATION for: ${job.jobTitle}`);
-    console.log(`📍 Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`);
+    console.log(
+      `📍 Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`,
+    );
     console.log(`👥 Original eligible: ${eligible.length} workers`);
     console.log(`🚫 Already responded: ${respondedWorkers.size} workers`);
     console.log(`✅ To notify: ${workersToNotify.length} workers\n`);
   } else {
     console.log(`\n🚀 Processing Rapid Job: ${job.jobTitle}`);
-    console.log(`📍 Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`);
+    console.log(
+      `📍 Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`,
+    );
     console.log(`👥 Found ${eligible.length} eligible workers\n`);
   }
 
   for (const { worker, distance, priority } of workersToNotify) {
     console.log(
-      `   → ${worker.name}: ${distance}km away, priority ${priority.toFixed(1)} ${worker.isVerified ? "✓" : ""}`
+      `   → ${worker.name}: ${distance}km away, priority ${priority.toFixed(1)} ${worker.isVerified ? "✓" : ""}`,
     );
 
     const success = await sendPushNotification(worker, job, distance, isReminder);
@@ -527,7 +521,7 @@ export async function notifyEligibleWorkers(
       startTime: formatStartTime(job.date, job.startTime),
       wage: `₹${job.wage}`,
       distance: `${distance} km`,
-      venueName: isStructuredLocation(job.location) ? job.location.venueName : 'Venue',
+      venueName: isStructuredLocation(job.location) ? job.location.venueName : "Venue",
       category: job.category,
       sentAt: new Date(),
       status: success ? "sent" : "failed",
@@ -542,9 +536,7 @@ export async function notifyEligibleWorkers(
     }
   }
 
-  console.log(
-    `\n✅ Successfully notified ${successCount}/${workersToNotify.length} workers\n`
-  );
+  console.log(`\n✅ Successfully notified ${successCount}/${workersToNotify.length} workers\n`);
 
   return {
     totalNotified: successCount,
@@ -580,7 +572,7 @@ export function scheduleReminderNotification(
   getCurrentJobStatus: () => {
     positionsRemaining: number;
     isCancelled: boolean;
-  }
+  },
 ): void {
   if (!job.isRapidJob) {
     return;
@@ -593,7 +585,7 @@ export function scheduleReminderNotification(
   }
 
   console.log(
-    `⏰ Scheduled reminder for "${job.jobTitle}" in ${NOTIFICATION_CONFIG.REMINDER_DELAY_MS / 1000 / 60} minutes`
+    `⏰ Scheduled reminder for "${job.jobTitle}" in ${NOTIFICATION_CONFIG.REMINDER_DELAY_MS / 1000 / 60} minutes`,
   );
 
   const timer = setTimeout(async () => {
@@ -632,9 +624,7 @@ export function scheduleReminderNotification(
     const result = await notifyEligibleWorkers(updatedJob, true);
 
     if (result.totalNotified > 0) {
-      console.log(
-        `\n✅ Reminder sent to ${result.totalNotified} workers who haven't responded\n`
-      );
+      console.log(`\n✅ Reminder sent to ${result.totalNotified} workers who haven't responded\n`);
     } else {
       console.log(`\n⚠️  No eligible workers to remind (all already responded)\n`);
     }
@@ -678,7 +668,9 @@ export function testRapidJobNotifications(job: BaseJob): void {
   console.log(`\n📋 Job Details:`);
   console.log(`   Title: ${job.jobTitle}`);
   console.log(`   Category: ${job.category}`);
-  console.log(`   Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`);
+  console.log(
+    `   Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`,
+  );
   console.log(`   Positions: ${job.positionsRequired}`);
   console.log(`   Wage: ₹${job.wage}`);
   console.log(`   Is Rapid: ${job.isRapidJob ? "✅ Yes" : "❌ No"}`);

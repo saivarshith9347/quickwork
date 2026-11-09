@@ -24,11 +24,7 @@ import {
   Package,
   Loader2,
 } from "lucide-react";
-import {
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -65,8 +61,7 @@ export const Route = createFileRoute("/work")({
       { property: "og:title", content: "Find Work — QuickWork" },
       {
         property: "og:description",
-        content:
-          "Browse open shifts near you. Filter by category, date and pay. Book in one tap.",
+        content: "Browse open shifts near you. Filter by category, date and pay. Book in one tap.",
       },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -86,25 +81,19 @@ const TOMORROW_ISO = (() => {
 
 const CATEGORY_CHIPS: { id: JobCategoryValue; emoji: string }[] = [
   { id: "Hospitality", emoji: "🍽" },
-  { id: "Events",      emoji: "🎪" },
-  { id: "Delivery",    emoji: "🚚" },
-  { id: "Retail",      emoji: "🛒" },
-  { id: "Construction",emoji: "👷" },
-  { id: "Warehouse",   emoji: "📦" },
-  { id: "Cleaning",    emoji: "🧹" },
-  { id: "Other",       emoji: "💼" },
+  { id: "Events", emoji: "🎪" },
+  { id: "Delivery", emoji: "🚚" },
+  { id: "Retail", emoji: "🛒" },
+  { id: "Construction", emoji: "👷" },
+  { id: "Warehouse", emoji: "📦" },
+  { id: "Cleaning", emoji: "🧹" },
+  { id: "Other", emoji: "💼" },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type FilterId =
-  | "rapid"
-  | "today"
-  | "tomorrow"
-  | "verified"
-  | "wage-1000"
-  | "wage-1200"
-  | "wage-1500";
+  "rapid" | "today" | "tomorrow" | "verified" | "wage-1000" | "wage-1200" | "wage-1500";
 
 // Extended JobListing with additional fields for job cards
 interface WorkJobListing extends JobListingType {
@@ -197,13 +186,16 @@ const MOCK_JOBS: WorkJobListing[] = [
  */
 function baseJobToJobListing(job: BaseJob): WorkJobListing {
   const baseJobListing = toJobListing(job, {
-    employerName: 'Unknown Employer',
+    employerName: "Unknown Employer",
   });
-  
+
   return {
     ...baseJobListing,
-    venueName: typeof job.location === 'object' ? job.location.venueName : formatLocation(job.location, 'short'),
-    city: typeof job.location === 'object' ? job.location.city : '',
+    venueName:
+      typeof job.location === "object"
+        ? job.location.venueName
+        : formatLocation(job.location, "short"),
+    city: typeof job.location === "object" ? job.location.city : "",
     jobDate: job.date,
     isRapidJob: job.isRapidJob,
     rapidJobExpiresAt: job.rapidJobExpiresAt || null,
@@ -418,11 +410,15 @@ function JobCard({ job, index }: JobCardProps) {
             <MapPin className="size-4 shrink-0 text-muted-foreground/70" aria-hidden="true" />
             <span className="font-medium text-foreground">{job.venueName}</span>
             <span className="text-muted-foreground/50">·</span>
-            <span>{job.area}, {job.city}</span>
+            <span>
+              {job.area}, {job.city}
+            </span>
             {distanceInfo.distanceDisplay && (
               <>
                 <span className="text-muted-foreground/50">·</span>
-                <span className="font-semibold text-foreground/80">{distanceInfo.distanceDisplay}</span>
+                <span className="font-semibold text-foreground/80">
+                  {distanceInfo.distanceDisplay}
+                </span>
               </>
             )}
           </p>
@@ -510,7 +506,10 @@ function JobCard({ job, index }: JobCardProps) {
                 }`}
               >
                 <span>{job.isRapidJob ? "Select Position — Urgent" : "View job"}</span>
-                <ChevronRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
+                <ChevronRight
+                  className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
               </div>
             )}
           </div>
@@ -617,7 +616,7 @@ function WorkPage() {
   // Build query params for React Query
   const queryParams = useMemo(() => {
     const params: {
-      status?: 'Open' | 'PartiallyFilled';
+      status?: "Open" | "PartiallyFilled";
       category?: JobCategoryValue;
       isRapidJob?: boolean;
       limit?: number;
@@ -637,7 +636,12 @@ function WorkPage() {
   }, [selectedCategory, activeFilters]);
 
   // Fetch jobs using React Query hook
-  const { data: baseJobs, isLoading, error, refetch } = useJobs(queryParams, {
+  const {
+    data: baseJobs,
+    isLoading,
+    error,
+    refetch,
+  } = useJobs(queryParams, {
     enabled: !isMockData, // Only fetch if Supabase is configured
     staleTime: 2 * 60 * 1000, // 2 minutes for job browsing
   });
@@ -654,34 +658,35 @@ function WorkPage() {
 
     // Apply client-side filters
     if (activeFilters.includes("today")) {
-      transformed = transformed.filter(j => j.jobDate === TODAY_ISO);
+      transformed = transformed.filter((j) => j.jobDate === TODAY_ISO);
     }
     if (activeFilters.includes("tomorrow")) {
-      transformed = transformed.filter(j => j.jobDate === TOMORROW_ISO);
+      transformed = transformed.filter((j) => j.jobDate === TOMORROW_ISO);
     }
     if (activeFilters.includes("wage-1500")) {
-      transformed = transformed.filter(j => j.maxWage >= 1500);
+      transformed = transformed.filter((j) => j.maxWage >= 1500);
     }
     if (activeFilters.includes("wage-1200")) {
-      transformed = transformed.filter(j => j.maxWage >= 1200);
+      transformed = transformed.filter((j) => j.maxWage >= 1200);
     }
     if (activeFilters.includes("wage-1000")) {
-      transformed = transformed.filter(j => j.maxWage >= 1000);
+      transformed = transformed.filter((j) => j.maxWage >= 1000);
     }
     if (activeFilters.includes("verified")) {
-      transformed = transformed.filter(j => j.isVerifiedEmployer);
+      transformed = transformed.filter((j) => j.isVerifiedEmployer);
     }
 
     // Apply search filter
     if (searchQuery.trim()) {
       const searchLower = searchQuery.toLowerCase();
-      transformed = transformed.filter(j =>
-        j.jobTitle.toLowerCase().includes(searchLower) ||
-        j.category.toLowerCase().includes(searchLower) ||
-        j.area.toLowerCase().includes(searchLower) ||
-        j.city.toLowerCase().includes(searchLower) ||
-        j.venueName.toLowerCase().includes(searchLower) ||
-        (j.description && j.description.toLowerCase().includes(searchLower))
+      transformed = transformed.filter(
+        (j) =>
+          j.jobTitle.toLowerCase().includes(searchLower) ||
+          j.category.toLowerCase().includes(searchLower) ||
+          j.area.toLowerCase().includes(searchLower) ||
+          j.city.toLowerCase().includes(searchLower) ||
+          j.venueName.toLowerCase().includes(searchLower) ||
+          (j.description && j.description.toLowerCase().includes(searchLower)),
       );
     }
 
@@ -700,9 +705,7 @@ function WorkPage() {
 
   // Filter helpers
   const toggleFilter = (f: FilterId) => {
-    setActiveFilters((prev) =>
-      prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]
-    );
+    setActiveFilters((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
   };
 
   const clearAll = () => {
@@ -713,9 +716,7 @@ function WorkPage() {
   };
 
   const filtersActive =
-    activeFilters.length > 0 ||
-    selectedCategory !== "All" ||
-    searchQuery.trim().length > 0;
+    activeFilters.length > 0 || selectedCategory !== "All" || searchQuery.trim().length > 0;
 
   const rapidJobs = useMemo(() => jobs.filter((j: WorkJobListing) => j.isRapidJob), [jobs]);
   const normalJobs = useMemo(() => jobs.filter((j: WorkJobListing) => !j.isRapidJob), [jobs]);
@@ -897,7 +898,10 @@ function WorkPage() {
             <>
               {/* Rapid Jobs spotlight section */}
               {rapidJobs.length > 0 && !activeFilters.includes("rapid") && (
-                <section className="mb-10 rounded-3xl border-2 border-orange-500/35 bg-gradient-to-b from-orange-500/[0.04] via-card to-card p-5 sm:p-6 shadow-sm" aria-label="Urgent rapid jobs">
+                <section
+                  className="mb-10 rounded-3xl border-2 border-orange-500/35 bg-gradient-to-b from-orange-500/[0.04] via-card to-card p-5 sm:p-6 shadow-sm"
+                  aria-label="Urgent rapid jobs"
+                >
                   <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
@@ -909,7 +913,8 @@ function WorkPage() {
                         </h2>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Urgent jobs where workers are required immediately or within a short time. Real-time countdown &amp; instant booking.
+                        Urgent jobs where workers are required immediately or within a short time.
+                        Real-time countdown &amp; instant booking.
                       </p>
                     </div>
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-600 dark:text-orange-400">
@@ -951,7 +956,7 @@ function WorkPage() {
                     {(activeFilters.includes("rapid") ? jobs : normalJobs).map(
                       (job: WorkJobListing, i: number) => (
                         <JobCard key={job.id} job={job} index={i} />
-                      )
+                      ),
                     )}
                   </div>
                 </section>
@@ -999,7 +1004,9 @@ function WorkPage() {
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-muted-foreground">Urgent / rapid</dt>
-                <dd className="font-bold text-orange-600 dark:text-orange-400">{rapidJobs.length}</dd>
+                <dd className="font-bold text-orange-600 dark:text-orange-400">
+                  {rapidJobs.length}
+                </dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-muted-foreground">Positions available</dt>
@@ -1041,20 +1048,18 @@ function LoggedInSidebar() {
   return (
     <>
       <div className="flex size-14 items-center justify-center rounded-2xl bg-[image:linear-gradient(135deg,var(--brand),var(--brand-deep))] font-display text-xl font-bold text-primary-foreground shadow-brand">
-        {user?.avatar ?? (user?.name?.[0] ?? "U")}
+        {user?.avatar ?? user?.name?.[0] ?? "U"}
       </div>
       <h2 className="mt-4 text-lg font-semibold">{user?.name ?? "Your Profile"}</h2>
-      {user?.location && (
-        <p className="mt-0.5 text-sm text-muted-foreground">{user.location}</p>
-      )}
+      {user?.location && <p className="mt-0.5 text-sm text-muted-foreground">{user.location}</p>}
       <div className="mt-3">
         <VerifiedBadge />
       </div>
       <dl className="mt-5 space-y-3 text-sm">
         {[
           { label: "Shifts completed", value: "14" },
-          { label: "Punctuality",      value: "98%",  cls: "text-success" },
-          { label: "Rating",           value: "4.9",  star: true },
+          { label: "Punctuality", value: "98%", cls: "text-success" },
+          { label: "Rating", value: "4.9", star: true },
         ].map(({ label, value, cls, star }) => (
           <div key={label} className="flex items-center justify-between">
             <dt className="text-muted-foreground">{label}</dt>

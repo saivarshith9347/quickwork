@@ -5,7 +5,7 @@
  * - true  → close modal and resume pendingAction
  */
 import { Check, Loader2, Mail, Phone, Zap } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,10 @@ function GoogleIcon() {
 // ─── OTP Input ────────────────────────────────────────────────────────────────
 
 function OtpInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const refs = Array.from({ length: 6 }, () => useRef<HTMLInputElement>(null));
+  const refs = useMemo(
+    () => Array.from({ length: 6 }, () => React.createRef<HTMLInputElement>()),
+    [],
+  );
 
   function handleChange(i: number, v: string) {
     const digit = v.replace(/\D/g, "").slice(-1);
@@ -358,7 +361,11 @@ export function LoginModal() {
             </Button>
             <button
               type="button"
-              onClick={() => { setStep("method"); setMethod(null); setError(null); }}
+              onClick={() => {
+                setStep("method");
+                setMethod(null);
+                setError(null);
+              }}
               className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
             >
               ← Back
@@ -393,7 +400,11 @@ export function LoginModal() {
             </Button>
             <button
               type="button"
-              onClick={() => { setStep("method"); setMethod(null); setError(null); }}
+              onClick={() => {
+                setStep("method");
+                setMethod(null);
+                setError(null);
+              }}
               className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
             >
               ← Back
@@ -434,7 +445,11 @@ export function LoginModal() {
             <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
-                onClick={() => { setOtpSent(false); setOtpInput(""); setError(null); }}
+                onClick={() => {
+                  setOtpSent(false);
+                  setOtpInput("");
+                  setError(null);
+                }}
                 className="text-muted-foreground hover:text-foreground"
               >
                 Change {method === "phone" ? "number" : "email"}

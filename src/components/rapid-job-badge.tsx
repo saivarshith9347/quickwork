@@ -41,7 +41,7 @@ export function RapidJobBadge({
       ...(rapidJobExpiresAt !== undefined && { rapidJobExpiresAt }),
       isRapidJob: true,
     },
-    onCutoff
+    onCutoff,
   );
 
   const { isCutoffReached, formattedTime, urgencyLevel, seconds } = countdown;
@@ -144,16 +144,14 @@ export function RapidJobCountdownBlock({
       ...(rapidJobExpiresAt !== undefined && { rapidJobExpiresAt }),
       isRapidJob: true,
     },
-    onCutoff
+    onCutoff,
   );
 
   const { isCutoffReached, formattedTime, urgencyLevel, seconds } = countdown;
 
   if (isCutoffReached) {
     return (
-      <div
-        className={`rounded-xl border border-muted bg-muted/40 p-3 text-center ${className}`}
-      >
+      <div className={`rounded-xl border border-muted bg-muted/40 p-3 text-center ${className}`}>
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Shift Status
         </p>
@@ -197,9 +195,7 @@ export function RapidJobCountdownBlock({
         >
           {formattedTime}
         </p>
-        <span className="text-xs font-medium text-muted-foreground">
-          before shift starts
-        </span>
+        <span className="text-xs font-medium text-muted-foreground">before shift starts</span>
       </div>
     </div>
   );
@@ -257,20 +253,17 @@ export function RapidJobSpotlightCard({
       ...(rapidJobExpiresAt !== undefined && { rapidJobExpiresAt }),
       isRapidJob: true,
     },
-    () => setIsCutoff(true)
+    () => setIsCutoff(true),
   );
 
-  const calculatedDistance =
-    distance ?? getDistanceToJob(area).distanceDisplay ?? "Nearby";
+  const calculatedDistance = distance ?? getDistanceToJob(area).distanceDisplay ?? "Nearby";
 
   const isFull = availablePositions === 0 && totalPositions > 0;
   const isClosed = isCutoff || countdown.isCutoffReached;
 
   // Percentage filled
   const fillPct =
-    totalPositions > 0
-      ? Math.max(8, Math.round((availablePositions / totalPositions) * 100))
-      : 0;
+    totalPositions > 0 ? Math.max(8, Math.round((availablePositions / totalPositions) * 100)) : 0;
 
   return (
     <article
@@ -421,7 +414,10 @@ export function RapidJobSpotlightCard({
               <Link to="/work/$jobId/positions" params={{ jobId: id }}>
                 <Zap className="size-4 fill-current mr-1.5" aria-hidden="true" />
                 Select Position — Urgent
-                <ArrowRight className="size-4 ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                <ArrowRight
+                  className="size-4 ml-1 transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
+                />
               </Link>
             </Button>
           )}
@@ -445,8 +441,7 @@ export function SurgePricingBadge({
     <span
       className={`inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success ${className}`}
     >
-      <Zap className="size-3 fill-current" />
-      +{surgePercentage}% surge
+      <Zap className="size-3 fill-current" />+{surgePercentage}% surge
     </span>
   );
 }

@@ -303,3 +303,174 @@ $$;
 
 COMMENT ON FUNCTION confirm_booking(uuid, text) IS
   'Convert PENDING position to BOOKED with ACCEPTED application. Handles unique violations and blocks cancelled jobs.';
+
+
+-- ---------------------------------------------------------------------------
+-- employer_update_application: Employer rejects or completes an application
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION employer_update_application(
+  p_application_id uuid,
+  p_status text,
+  p_note text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_employer_id uuid;
+  v_application record;
+  v_job record;
+BEGIN
+  -- Authenticate
+  v_employer_id := auth.uid();
+  IF v_employer_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_authenticated');
+  END IF;
+
+  -- Validate status parameter
+  IF p_status NOT IN ('REJECTED', 'COMPLETED') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_status');
+  END IF;
+
+  -- Lock and fetch application
+  SELECT * INTO v_application
+  FROM applications
+  WHERE id = p_application_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'application_not_found');
+  END IF;
+
+  -- Verify current status is ACCEPTED
+  IF v_application.status != 'ACCEPTED' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'application_not_accepted');
+  END IF;
+
+  -- Get job details and verify caller is the employer
+  SELECT j.* INTO v_job
+  FROM jobs j
+  WHERE j.id = v_application.job_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'job_not_found');
+  END IF;
+
+  IF v_job.employer_id != v_employer_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_job_employer');
+  END IF;
+
+  -- Update application status and note
+  UPDATE applications
+  SET 
+    status = p_status,
+    employer_note = p_note,
+    updated_at = now()
+  WHERE id = p_application_id;
+
+  -- If REJECTED, free the position seat
+  IF p_status = 'REJECTED' THEN
+    UPDATE job_positions
+    SET 
+      status = 'AVAILABLE',
+      worker_id = NULL,
+      application_id = NULL,
+      locked_at = NULL,
+      lock_expires_at = NULL
+    WHERE id = v_application.position_id;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'application_id', p_application_id,
+    'new_status', p_status
+  );
+END;
+$$;
+
+COMMENT ON FUNCTION employer_update_application(uuid, text, text) IS
+  'Allows employer to reject or complete an ACCEPTED application. REJECTED frees the position seat.';
+
+REVOKE EXECUTE ON FUNCTION employer_update_application(uuid, text, text) FROM public;
+GRANT EXECUTE ON FUNCTION employer_update_application(uuid, text, text) TO authenticated;
+
+-- ---------------------------------------------------------------------------
+-- complete_my_shift: Worker marks their shift as completed
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION complete_my_shift(p_application_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_worker_id uuid;
+  v_application record;
+  v_job record;
+  v_current_date date;
+BEGIN
+  -- Authenticate
+  v_worker_id := auth.uid();
+  IF v_worker_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_authenticated');
+  END IF;
+
+  -- Get current date in Asia/Kolkata timezone
+  v_current_date := (now() AT TIME ZONE 'Asia/Kolkata')::date;
+
+  -- Lock and fetch application
+  SELECT * INTO v_application
+  FROM applications
+  WHERE id = p_application_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'application_not_found');
+  END IF;
+
+  -- Verify caller is the application's worker
+  IF v_application.worker_id != v_worker_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_your_application');
+  END IF;
+
+  -- Verify status is ACCEPTED
+  IF v_application.status != 'ACCEPTED' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'application_not_accepted');
+  END IF;
+
+  -- Get job details
+  SELECT j.* INTO v_job
+  FROM jobs j
+  WHERE j.id = v_application.job_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'job_not_found');
+  END IF;
+
+  -- Verify job_date is today or in the past (Asia/Kolkata)
+  IF v_job.job_date > v_current_date THEN
+    RETURN jsonb_build_object('success', false, 'error', 'shift_not_yet_started');
+  END IF;
+
+  -- Update application status to COMPLETED
+  UPDATE applications
+  SET 
+    status = 'COMPLETED',
+    updated_at = now()
+  WHERE id = p_application_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'application_id', p_application_id,
+    'new_status', 'COMPLETED'
+  );
+END;
+$$;
+
+COMMENT ON FUNCTION complete_my_shift(uuid) IS
+  'Allows worker to mark their ACCEPTED shift as COMPLETED if job_date has arrived (Asia/Kolkata timezone).';
+
+REVOKE EXECUTE ON FUNCTION complete_my_shift(uuid) FROM public;
+GRANT EXECUTE ON FUNCTION complete_my_shift(uuid) TO authenticated;

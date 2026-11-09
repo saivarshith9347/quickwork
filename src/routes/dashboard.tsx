@@ -17,6 +17,7 @@ import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { VerifiedBadge } from "@/components/verified-badge";
+import { RequireAuth } from "@/components/require-auth";
 import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/dashboard")({
@@ -31,6 +32,14 @@ export const Route = createFileRoute("/dashboard")({
   }),
   component: DashboardPage,
 });
+
+function DashboardPage() {
+  return (
+    <RequireAuth>
+      <DashboardContent />
+    </RequireAuth>
+  );
+}
 
 // ─── Mock activity data ───────────────────────────────────────────────────────
 
@@ -82,19 +91,10 @@ const postedJobs = [
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-function DashboardPage() {
-  const { isLoggedIn, user, openLoginModal } = useAuth();
-  const navigate = useNavigate();
+function DashboardContent() {
+  const { user } = useAuth();
 
-  // Redirect guests to login, then back here
-  useEffect(() => {
-    if (!isLoggedIn) {
-      openLoginModal({ type: "dashboard" });
-      navigate({ to: "/" });
-    }
-  }, [isLoggedIn, openLoginModal, navigate]);
-
-  if (!isLoggedIn || !user) return null;
+  if (!user) return null;
 
   const firstName = user.name?.split(" ")[0] ?? "there";
 

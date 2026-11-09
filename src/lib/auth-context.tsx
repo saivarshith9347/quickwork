@@ -25,7 +25,7 @@ export interface AuthUser {
   phone: string | null;
   email: string | null;
   profileComplete: boolean;
-  /** Avatar URL or initials */
+  /** Avatar URL only - never contains initials */
   avatar?: string | undefined;
   location?: string | undefined;
 }
@@ -93,23 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Error fetching profile:", error);
       }
 
-      // Generate initials from name
-      const initials = profile?.name
-        ? profile.name
-            .split(" ")
-            .map((n: string) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2)
-        : undefined;
-
       return {
         id: authUser.id,
         name: profile?.name || null,
         phone: profile?.phone || authUser.phone || null,
         email: profile?.email || authUser.email || null,
         profileComplete: profile?.profile_complete || false,
-        avatar: profile?.avatar_url || initials,
+        // avatar_url should only contain actual URLs, never initials
+        avatar: profile?.avatar_url || undefined,
         location: profile?.location || undefined,
       };
     },
@@ -124,10 +115,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        fetchUserProfile(session.user).then(setUser).catch(console.error);
+        try {
+          const userProfile = await fetchUserProfile(session.user);
+          setUser(userProfile);
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          setUser(null);
+        }
       }
       setLoading(false);
     });
@@ -136,12 +133,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        fetchUserProfile(session.user).then(setUser).catch(console.error);
-      } else {
-        setUser(null);
-      }
+      // Defer Supabase queries to avoid executing inside the callback
+      setTimeout(() => {
+        setSession(session);
+        if (session?.user) {
+          // Keep loading true until profile is fetched
+          setLoading(true);
+          fetchUserProfile(session.user)
+            .then((userProfile) => {
+              setUser(userProfile);
+              setLoading(false);
+            })
+            .catch((error) => {
+              console.error("Error fetching user profile:", error);
+              setUser(null);
+              setLoading(false);
+            });
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      }, 0);
     });
 
     return () => subscription.unsubscribe();
@@ -291,22 +303,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Not authenticated");
       }
 
-      const initials = data.name
-        ? data.name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2)
-        : undefined;
-
       const { error } = await supabase
         .from("profiles")
         .update({
           name: data.name || null,
           phone: data.phone || null,
           location: data.location || null,
-          avatar_url: data.avatar || initials || null,
+          // Only save avatar if it's a URL, never save initials
+          avatar_url: data.avatar || null,
           profile_complete: true,
         })
         .eq("id", user.id);
@@ -322,7 +326,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...prev,
           ...data,
           profileComplete: true,
-          avatar: data.avatar || initials,
         };
       });
     },

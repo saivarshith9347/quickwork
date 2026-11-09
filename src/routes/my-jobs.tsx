@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import { RequireAuth } from "@/components/require-auth";
 import { useAuth } from "@/lib/auth-context";
 import { getSupabase } from "@/lib/supabase";
 import { ApplicationService } from "@/lib/services/application-service";
@@ -1186,13 +1187,19 @@ function matchesTab(job: JobRow, tab: TabFilter): boolean {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 function MyJobsPage() {
-  const { user, isLoggedIn, openLoginModal } = useAuth();
+  return (
+    <RequireAuth>
+      <MyJobsContent />
+    </RequireAuth>
+  );
+}
+
+function MyJobsContent() {
+  const { user } = useAuth();
 
   const [tab, setTab] = useState<TabFilter>("All");
   const tabsRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
-
-  const isMock = !user?.id;
 
   // Fetch employer's full jobs data (including categories, positions, and applicants) using React Query
   const {
@@ -1203,13 +1210,13 @@ function MyJobsPage() {
   } = useQuery<JobRow[], Error>({
     queryKey: ["employer-jobs", user?.id || ""],
     queryFn: async () => {
-      if (!user?.id) return buildMockData();
+      if (!user?.id) throw new Error("User not found");
       return fetchEmployerJobs(user.id);
     },
     enabled: !!user?.id,
   });
 
-  const jobs = employerJobs ?? (isMock ? buildMockData() : []);
+  const jobs = employerJobs ?? [];
 
   // ── Optimistic application status update ──────────────────────────────────
   const handleAppUpdate = useCallback(
@@ -1220,24 +1227,6 @@ function MyJobsPage() {
     },
     [queryClient, refetch],
   );
-
-  // ── Login gate ─────────────────────────────────────────────────────────────
-  if (!isLoggedIn) {
-    return (
-      <div className="mx-auto max-w-3xl px-5 py-20 text-center">
-        <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <Briefcase className="size-8" />
-        </div>
-        <h1 className="mt-6 text-2xl font-bold">Sign in to manage your jobs</h1>
-        <p className="mt-2 text-muted-foreground">
-          Post jobs, review applicants, and track positions — all in one place.
-        </p>
-        <Button variant="hero" size="lg" className="mt-6" onClick={() => openLoginModal()}>
-          Sign in to continue
-        </Button>
-      </div>
-    );
-  }
 
   const filtered = jobs.filter((j) => matchesTab(j, tab));
   const tabCounts = Object.fromEntries(

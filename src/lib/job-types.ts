@@ -149,6 +149,10 @@ export interface ReportingContact {
 export interface BaseJob {
   id: string;
   employerId: string;
+  
+  // Employer info (joined from public_profiles)
+  employerName?: string;
+  isVerifiedEmployer?: boolean;
 
   // New required fields
   jobTitle: string;

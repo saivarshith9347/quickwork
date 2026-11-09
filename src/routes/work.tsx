@@ -2,37 +2,19 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
   CalendarDays,
-  Check,
-  CheckCircle2,
   ChevronRight,
-  Clock,
-  Filter,
-  Lock,
   MapPin,
-  RefreshCw,
   Search,
-  SearchX,
   SlidersHorizontal,
-  Star,
-  TrendingUp,
-  Users,
-  Utensils,
   Wallet,
   X,
-  Zap,
-  ArrowRight,
-  Package,
-  Loader2,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { JobCardListSkeleton } from "@/components/job-card-skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
-import { RapidJobBadge, RapidJobSpotlightCard } from "@/components/rapid-job-badge";
-import { VerifiedBadge } from "@/components/verified-badge";
+import { RapidJobBadge } from "@/components/rapid-job-badge";
 import { useAuth } from "@/lib/auth-context";
 import { getDistanceToJob } from "@/lib/distance-utils";
 import {
@@ -40,12 +22,10 @@ import {
   type JobCategoryValue,
   type BaseJob,
   formatLocation,
-  calculateDuration,
   toJobListing,
   type JobListing as JobListingType,
 } from "@/lib/job-types";
 import { useJobs } from "@/lib/hooks/use-jobs";
-import { getSupabase } from "@/lib/supabase";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -71,7 +51,6 @@ export const Route = createFileRoute("/work")({
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PAGE_SIZE = 12;
 const TODAY_ISO = new Date().toISOString().split("T")[0]!;
 const TOMORROW_ISO = (() => {
   const d = new Date();
@@ -93,7 +72,13 @@ const CATEGORY_CHIPS: { id: JobCategoryValue; emoji: string }[] = [
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type FilterId =
-  "rapid" | "today" | "tomorrow" | "verified" | "wage-1000" | "wage-1200" | "wage-1500";
+  | "rapid"
+  | "today"
+  | "tomorrow"
+  | "verified"
+  | "wage-1000"
+  | "wage-1200"
+  | "wage-1500";
 
 // Extended JobListing with additional fields for job cards
 interface WorkJobListing extends JobListingType {
@@ -113,80 +98,14 @@ interface WorkJobListing extends JobListingType {
 
 type JobListing = WorkJobListing;
 
-// ─── Mock Data (fallback when Supabase not configured) ───────────────────────
-
-const MOCK_JOBS: WorkJobListing[] = [
-  {
-    id: "mock-1",
-    jobTitle: "Banquet Server - Urgent",
-    category: "Hospitality",
-    employer: "Grand Events",
-    rating: "4.8",
-    wage: 1500,
-    wageDisplay: "₹1,500",
-    date: TODAY_ISO,
-    startTime: "18:00",
-    endTime: "23:00",
-    duration: 300,
-    location: "Gachibowli, Hyderabad",
-    area: "Gachibowli",
-    distance: "2.5 km",
-    facilities: ["Meals provided", "Uniform"],
-    jobType: "one-time",
-    description: "Urgent banquet server needed for wedding reception",
-    venueName: "Grand Sapphire Banquets",
-    city: "Hyderabad",
-    jobDate: TODAY_ISO,
-    isRapidJob: true,
-    rapidJobExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-    status: "Open",
-    isVerifiedEmployer: true,
-    minWage: 1500,
-    maxWage: 1500,
-    categoryNames: ["Food Serving"],
-    totalPositions: 5,
-    availablePositions: 3,
-  },
-  {
-    id: "mock-2",
-    jobTitle: "Warehouse Loading Staff",
-    category: "Warehouse",
-    employer: "Urban Logistics",
-    wage: 1100,
-    wageDisplay: "₹1,100",
-    date: TOMORROW_ISO,
-    startTime: "06:00",
-    endTime: "14:00",
-    duration: 480,
-    location: "Uppal, Hyderabad",
-    area: "Uppal",
-    facilities: ["Transport"],
-    jobType: "one-time",
-    description: "Weekend inventory shift - must lift 20kg+",
-    venueName: "Urban Logistics Hub",
-    city: "Hyderabad",
-    jobDate: TOMORROW_ISO,
-    isRapidJob: false,
-    rapidJobExpiresAt: null,
-    status: "PartiallyFilled",
-    isVerifiedEmployer: false,
-    minWage: 1100,
-    maxWage: 1100,
-    categoryNames: ["Loading Crew"],
-    totalPositions: 10,
-    availablePositions: 6,
-  },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
  * Transform BaseJob from service to WorkJobListing for display.
- * Handles employer verification status (simplified for now).
  */
 function baseJobToJobListing(job: BaseJob): WorkJobListing {
   const baseJobListing = toJobListing(job, {
-    employerName: "Unknown Employer",
+    employerName: job.employerName || "Unknown Employer",
   });
 
   return {
@@ -200,7 +119,7 @@ function baseJobToJobListing(job: BaseJob): WorkJobListing {
     isRapidJob: job.isRapidJob,
     rapidJobExpiresAt: job.rapidJobExpiresAt || null,
     status: job.status,
-    isVerifiedEmployer: false, // TODO: Join with employer profile
+    isVerifiedEmployer: job.isVerifiedEmployer || false,
     minWage: job.wage,
     maxWage: job.wage,
     categoryNames: [job.category],
@@ -609,11 +528,7 @@ function WorkPage() {
   const [activeFilters, setActiveFilters] = useState<FilterId[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<JobCategoryValue | "All">("All");
 
-  // Check if Supabase is configured
-  const supabaseClient = getSupabase();
-  const isMockData = !supabaseClient;
-
-  // Build query params for React Query
+  // Build query params for React Query - always fetch jobs that are Open or PartiallyFilled, job_date >= today
   const queryParams = useMemo(() => {
     const params: {
       status?: "Open" | "PartiallyFilled";
@@ -621,7 +536,7 @@ function WorkPage() {
       isRapidJob?: boolean;
       limit?: number;
     } = {
-      limit: 50, // Fetch more initially, we'll filter client-side
+      limit: 100, // Fetch more initially, we'll filter client-side
     };
 
     if (selectedCategory !== "All") {
@@ -642,19 +557,30 @@ function WorkPage() {
     error,
     refetch,
   } = useJobs(queryParams, {
-    enabled: !isMockData, // Only fetch if Supabase is configured
     staleTime: 2 * 60 * 1000, // 2 minutes for job browsing
   });
 
   // Transform BaseJob[] to JobListing[] and apply client-side filters
   const jobs = useMemo(() => {
-    // Use mock data if Supabase not configured
-    if (isMockData || !baseJobs) {
-      return MOCK_JOBS;
-    }
+    if (!baseJobs) return [];
 
     // Transform to JobListing format
     let transformed = baseJobs.map(baseJobToJobListing);
+
+    // Filter: job_date >= today
+    transformed = transformed.filter((j) => j.jobDate >= TODAY_ISO);
+
+    // Filter: status Open or PartiallyFilled
+    transformed = transformed.filter(
+      (j) => j.status === "Open" || j.status === "PartiallyFilled",
+    );
+
+    // Filter: Rapid jobs not expired
+    transformed = transformed.filter((j) => {
+      if (!j.isRapidJob) return true;
+      if (!j.rapidJobExpiresAt) return true;
+      return new Date(j.rapidJobExpiresAt) > new Date();
+    });
 
     // Apply client-side filters
     if (activeFilters.includes("today")) {
@@ -691,7 +617,7 @@ function WorkPage() {
     }
 
     return transformed;
-  }, [baseJobs, activeFilters, searchQuery, isMockData]);
+  }, [baseJobs, activeFilters, searchQuery]);
 
   // Debounce search input
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -734,11 +660,6 @@ function WorkPage() {
               : `${jobs.length} open shift${jobs.length !== 1 ? "s" : ""}${filtersActive ? " match your filters" : " today"}`}
           </p>
         </div>
-        {isMockData && (
-          <div className="animate-bounce-in rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-            Preview mode — connect Supabase to see live jobs
-          </div>
-        )}
       </div>
 
       {/* ── Search bar ────────────────────────────────────────────────────── */}
@@ -863,253 +784,69 @@ function WorkPage() {
           <button
             type="button"
             onClick={clearAll}
-            className="ml-1 flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/8 px-3 py-1.5 text-xs font-semibold text-destructive transition-all hover:bg-destructive/15"
-            id="clear-all-filters-btn"
+            className="ml-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-all duration-200 hover:border-destructive hover:text-destructive"
           >
-            <X className="size-3" strokeWidth={3} aria-hidden="true" />
             Clear all
           </button>
         )}
       </div>
 
-      {/* ── Main content grid ─────────────────────────────────────────────── */}
-      <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_296px]">
-        <div>
-          {/* Error */}
-          {error && !isMockData && (
-            <ErrorState
-              title="Could not load jobs"
-              description={error.message}
-              onRetry={() => refetch()}
-            />
-          )}
-
-          {/* Loading skeleton */}
-          {isLoading && !error && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <NewJobCardSkeleton key={i} index={i} />
-              ))}
-            </div>
-          )}
-
-          {/* Results */}
-          {!isLoading && !error && (
-            <>
-              {/* Rapid Jobs spotlight section */}
-              {rapidJobs.length > 0 && !activeFilters.includes("rapid") && (
-                <section
-                  className="mb-10 rounded-3xl border-2 border-orange-500/35 bg-gradient-to-b from-orange-500/[0.04] via-card to-card p-5 sm:p-6 shadow-sm"
-                  aria-label="Urgent rapid jobs"
-                >
-                  <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="flex size-7 items-center justify-center rounded-lg bg-orange-500/15 text-orange-600 dark:text-orange-400">
-                          <Zap className="size-4 fill-current" aria-hidden="true" />
-                        </span>
-                        <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                          ⚡ Rapid Jobs — Immediate Shifts Needed
-                        </h2>
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Urgent jobs where workers are required immediately or within a short time.
-                        Real-time countdown &amp; instant booking.
-                      </p>
-                    </div>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-600 dark:text-orange-400">
-                      <span className="size-2 rounded-full bg-orange-500 animate-pulse" />
-                      {rapidJobs.length} Urgent Shift{rapidJobs.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-5 md:grid-cols-2">
-                    {rapidJobs.map((job: WorkJobListing) => (
-                      <RapidJobSpotlightCard
-                        key={job.id}
-                        id={job.id}
-                        jobTitle={job.jobTitle}
-                        category={job.category}
-                        venueName={job.venueName}
-                        area={job.area}
-                        city={job.city}
-                        jobDate={job.jobDate}
-                        startTime={job.startTime}
-                        endTime={job.endTime}
-                        wage={job.maxWage || job.minWage}
-                        availablePositions={job.availablePositions}
-                        totalPositions={job.totalPositions}
-                        rapidJobExpiresAt={job.rapidJobExpiresAt}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Regular jobs section */}
-              {normalJobs.length > 0 && (
-                <section aria-label="Available shifts">
-                  {rapidJobs.length > 0 && !activeFilters.includes("rapid") && (
-                    <h2 className="mb-4 text-lg font-bold">All open shifts</h2>
-                  )}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {(activeFilters.includes("rapid") ? jobs : normalJobs).map(
-                      (job: WorkJobListing, i: number) => (
-                        <JobCard key={job.id} job={job} index={i} />
-                      ),
-                    )}
-                  </div>
-                </section>
-              )}
-
-              {/* Empty state */}
-              {jobs.length === 0 && filtersActive && (
-                <EmptyState
-                  icon={SearchX}
-                  title="No shifts found"
-                  description="No shifts match your current filters. Try adjusting them."
-                  action={{ label: "Clear filters", onClick: clearAll }}
-                  variant="muted"
-                />
-              )}
-              {jobs.length === 0 && !filtersActive && (
-                <EmptyState
-                  icon={SearchX}
-                  title="No shifts found"
-                  description="No shifts are available right now. Check back soon!"
-                  variant="muted"
-                />
-              )}
-            </>
-          )}
-        </div>
-
-        {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-        <aside className="h-fit lg:sticky lg:top-24 space-y-4">
-          {/* Profile / login nudge card */}
-          <div className="rounded-3xl border border-border bg-surface p-6">
-            {isLoggedIn ? <LoggedInSidebar /> : <GuestSidebarNudge />}
+      {/* ── Content ───────────────────────────────────────────────────────── */}
+      <div className="mt-8">
+        {isLoading ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <NewJobCardSkeleton key={i} index={i} />
+            ))}
           </div>
-
-          {/* Stats card */}
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-bold">
-              <TrendingUp className="size-4 text-primary" aria-hidden="true" />
-              Live Opportunities
-            </h3>
-            <dl className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">Open shifts</dt>
-                <dd className="font-bold text-primary">{jobs.length}</dd>
+        ) : error ? (
+          <ErrorState
+            title="Failed to load jobs"
+            message={error instanceof Error ? error.message : "An error occurred"}
+            actionLabel="Try again"
+            onAction={() => refetch()}
+          />
+        ) : jobs.length === 0 ? (
+          <EmptyState
+            title={filtersActive ? "No jobs match your filters" : "No jobs available"}
+            message={
+              filtersActive
+                ? "Try adjusting your search or filters to see more results"
+                : "Check back soon for new opportunities"
+            }
+            actionLabel={filtersActive ? "Clear filters" : undefined}
+            onAction={filtersActive ? clearAll : undefined}
+          />
+        ) : (
+          <>
+            {/* Rapid jobs section */}
+            {rapidJobs.length > 0 && (
+              <div className="mb-8">
+                <h2 className="mb-4 text-2xl font-bold text-foreground">⚡ Rapid Jobs</h2>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {rapidJobs.map((job, i) => (
+                    <JobCard key={job.id} job={job} index={i} />
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">Urgent / rapid</dt>
-                <dd className="font-bold text-orange-600 dark:text-orange-400">
-                  {rapidJobs.length}
-                </dd>
+            )}
+
+            {/* Normal jobs section */}
+            {normalJobs.length > 0 && (
+              <div>
+                {rapidJobs.length > 0 && (
+                  <h2 className="mb-4 text-2xl font-bold text-foreground">All Jobs</h2>
+                )}
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {normalJobs.map((job, i) => (
+                    <JobCard key={job.id} job={job} index={i} />
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">Positions available</dt>
-                <dd className="font-bold text-success">
-                  {jobs.reduce((s, j) => s + j.availablePositions, 0)}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          {/* How it works */}
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
-            <h3 className="mb-3 text-sm font-bold text-primary">How it works</h3>
-            <ol className="space-y-2.5 text-xs text-muted-foreground">
-              {[
-                "Browse open shifts near you",
-                "Pick a role and position",
-                "Show up and get paid",
-              ].map((step, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                    {i + 1}
-                  </span>
-                  {step}
-                </li>
-              ))}
-            </ol>
-          </div>
-        </aside>
+            )}
+          </>
+        )}
       </div>
-    </div>
-  );
-}
-
-// ─── Logged-in sidebar ────────────────────────────────────────────────────────
-
-function LoggedInSidebar() {
-  const { user } = useAuth();
-  return (
-    <>
-      <div className="flex size-14 items-center justify-center rounded-2xl bg-[image:linear-gradient(135deg,var(--brand),var(--brand-deep))] font-display text-xl font-bold text-primary-foreground shadow-brand">
-        {user?.avatar ?? user?.name?.[0] ?? "U"}
-      </div>
-      <h2 className="mt-4 text-lg font-semibold">{user?.name ?? "Your Profile"}</h2>
-      {user?.location && <p className="mt-0.5 text-sm text-muted-foreground">{user.location}</p>}
-      <div className="mt-3">
-        <VerifiedBadge />
-      </div>
-      <dl className="mt-5 space-y-3 text-sm">
-        {[
-          { label: "Shifts completed", value: "14" },
-          { label: "Punctuality", value: "98%", cls: "text-success" },
-          { label: "Rating", value: "4.9", star: true },
-        ].map(({ label, value, cls, star }) => (
-          <div key={label} className="flex items-center justify-between">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className={`flex items-center gap-1 font-semibold ${cls ?? ""}`}>
-              {star && <Star className="size-3.5 fill-gold text-gold" aria-hidden="true" />}
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <Button variant="outline" size="sm" className="mt-5 w-full" asChild>
-        <Link to="/profile">Edit profile</Link>
-      </Button>
-    </>
-  );
-}
-
-// ─── Guest nudge ──────────────────────────────────────────────────────────────
-
-function GuestSidebarNudge() {
-  const { openLoginModal } = useAuth();
-  return (
-    <div className="flex flex-col items-center text-center">
-      <div className="relative flex size-14 items-center justify-center rounded-2xl bg-accent text-primary">
-        <Lock className="size-6" aria-hidden="true" />
-        <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-          ?
-        </span>
-      </div>
-      <h3 className="mt-4 text-base font-semibold">Ready to find work?</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Create a free account to apply, track applications, and build your verified profile.
-      </p>
-      <Button
-        variant="hero"
-        size="lg"
-        className="mt-5 w-full"
-        onClick={() => openLoginModal({ type: "book-shift" })}
-        id="guest-signup-btn"
-      >
-        Sign up — it's free
-      </Button>
-      <button
-        type="button"
-        onClick={() => openLoginModal()}
-        className="mt-3 text-sm text-primary hover:underline"
-        id="guest-login-btn"
-      >
-        Already have an account? Log in
-      </button>
     </div>
   );
 }

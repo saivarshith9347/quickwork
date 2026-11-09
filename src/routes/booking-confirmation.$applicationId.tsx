@@ -20,6 +20,8 @@ import { useApplication } from "@/lib/hooks/use-applications";
 import { useJob } from "@/lib/hooks/use-jobs";
 import { useAuth } from "@/lib/auth-context";
 import { formatLocation } from "@/lib/job-types";
+import { getSupabase } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/booking-confirmation/$applicationId")({
   head: () => ({
@@ -34,48 +36,6 @@ export const Route = createFileRoute("/booking-confirmation/$applicationId")({
   component: BookingConfirmationPage,
 });
 
-// Mock job data (should match work.$jobId.tsx)
-const mockJobs: Record<string, any> = {
-  "1": {
-    id: "1",
-    jobTitle: "Banquet servers for wedding reception",
-    venueName: "Grand Palm Banquets",
-    employer: "Grand Palm Banquets",
-    wage: 1200,
-    wageDisplay: "₹1,200",
-    date: "2026-09-10",
-    startTime: "17:00",
-    endTime: "23:00",
-    location: "Plot 42, MIDC Road, Andheri East, Mumbai",
-    area: "Andheri East",
-    city: "Mumbai",
-    reportingContact: {
-      name: "Rajesh Kumar",
-      phone: "+91 98765 43210",
-    },
-    isRapidJob: true,
-  },
-  "2": {
-    id: "2",
-    jobTitle: "Kitchen staff for catering event",
-    venueName: "Commercial Kitchen Complex",
-    employer: "Saffron Caterers",
-    wage: 950,
-    wageDisplay: "₹950",
-    date: "2026-09-11",
-    startTime: "09:00",
-    endTime: "16:00",
-    location: "Building 12, Hiranandani Business Park, Powai, Mumbai",
-    area: "Powai",
-    city: "Mumbai",
-    reportingContact: {
-      name: "Chef Priya Sharma",
-      phone: "+91 98765 11111",
-    },
-    isRapidJob: false,
-  },
-};
-
 function BookingConfirmationPage() {
   const { applicationId } = Route.useParams();
   const navigate = useNavigate();
@@ -87,6 +47,26 @@ function BookingConfirmationPage() {
   // Fetch job details if we have an application
   const { data: job, isLoading: jobLoading } = useJob(application?.jobId, {
     enabled: !!application?.jobId,
+  });
+
+  // Fetch reporting contact from job_private
+  const { data: reportingContact } = useQuery({
+    queryKey: ["job-private", application?.jobId],
+    queryFn: async () => {
+      const supabase = getSupabase();
+      if (!supabase || !application?.jobId) return null;
+
+      const { data, error } = await supabase
+        .from("job_private")
+        .select("reporting_contact")
+        .eq("job_id", application.jobId)
+        .single();
+
+      if (error || !data) return null;
+
+      return data.reporting_contact as { name: string; phone: string } | null;
+    },
+    enabled: !!application?.jobId && (application?.status === "BOOKED" || application?.status === "ACCEPTED"),
   });
 
   useEffect(() => {
@@ -335,7 +315,7 @@ function BookingConfirmationPage() {
           </div>
 
           {/* Reporting Contact */}
-          {job.reportingContact && (
+          {reportingContact && (
             <div className="rounded-2xl border border-success/40 bg-success/5 p-6">
               <div className="flex items-start gap-4">
                 <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-success/20 text-success">
@@ -343,12 +323,12 @@ function BookingConfirmationPage() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-success">Reporting Contact</p>
-                  <p className="mt-1 font-semibold">{job.reportingContact.name}</p>
+                  <p className="mt-1 font-semibold">{reportingContact.name}</p>
                   <a
-                    href={`tel:${job.reportingContact.phone}`}
+                    href={`tel:${reportingContact.phone}`}
                     className="mt-1 inline-block text-sm font-semibold text-primary hover:underline"
                   >
-                    {job.reportingContact.phone}
+                    {reportingContact.phone}
                   </a>
                   <p className="mt-2 text-xs text-muted-foreground">
                     Call if you have any questions or need directions

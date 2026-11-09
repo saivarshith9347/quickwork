@@ -10,6 +10,8 @@ import {
   Users,
   Wallet,
   ClipboardList,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -21,7 +23,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { ApplicationCard } from "@/components/application-card";
 import { useAuth } from "@/lib/auth-context";
-import { useApplications, seedMockApplications } from "@/lib/application-model";
+import { JobService } from "@/lib/services/job-service";
+import { ApplicationService } from "@/lib/services/application-service";
+import type { Application } from "@/lib/services/application-service";
 import {
   formatLocation,
   getLocationArea,
@@ -31,6 +35,7 @@ import {
   JOB_STATUS_LABELS,
   JOB_STATUS_COLORS,
   getFillPercentage,
+  type BaseJob,
   type JobCategoryValue,
   type JobTypeValue,
   type JobStatusValue,
@@ -55,113 +60,103 @@ export const Route = createFileRoute("/hire")({
   component: HirePage,
 });
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const facilities = ["Meals provided", "Transport", "Uniform", "Locker room"];
 
-type JobSummary = {
-  id: string;
-  jobTitle: string;
-  category: JobCategoryValue;
-  positionsRequired: number;
-  positionsConfirmed: number;
-  positionsRemaining: number;
-  date: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  location: string;
-  area: string;
-  wage: string;
-  status: JobStatusValue;
-  jobType: JobTypeValue;
-  postedAt: string;
-};
+// ─── Helper Functions ─────────────────────────────────────────────────────────
 
-const jobs: JobSummary[] = [
-  {
-    id: "1",
-    jobTitle: "Banquet servers for wedding",
-    category: "Hospitality",
-    positionsRequired: 8,
-    positionsConfirmed: 6,
-    positionsRemaining: 2,
-    date: "Fri, 14 Sep",
-    startTime: "17:00",
-    endTime: "23:00",
-    duration: 360,
-    location: "Grand Palm Banquets, Andheri East, Mumbai",
-    area: "Andheri East",
-    wage: "₹1,200",
-    status: "PartiallyFilled",
-    jobType: "one-time",
-    postedAt: "2 hours ago",
-  },
-  {
-    id: "2",
-    jobTitle: "Kitchen helpers for catering",
-    category: "Hospitality",
-    positionsRequired: 4,
-    positionsConfirmed: 4,
-    positionsRemaining: 0,
-    date: "Sat, 15 Sep",
-    startTime: "09:00",
-    endTime: "16:00",
-    duration: 420,
-    location: "Commercial Kitchen Complex, Powai, Mumbai",
-    area: "Powai",
-    wage: "₹950",
-    status: "FullyFilled",
-    jobType: "one-time",
-    postedAt: "1 day ago",
-  },
-  {
-    id: "3",
-    jobTitle: "Dishwashing crew",
-    category: "Hospitality",
-    positionsRequired: 3,
-    positionsConfirmed: 0,
-    positionsRemaining: 3,
-    date: "Sun, 16 Sep",
-    startTime: "19:00",
-    endTime: "01:00",
-    duration: 360,
-    location: "Coastal Restaurant, Lower Parel, Mumbai",
-    area: "Lower Parel",
-    wage: "₹900",
-    status: "Open",
-    jobType: "recurring",
-    postedAt: "3 hours ago",
-  },
-];
+function formatJobDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function getLocationDisplay(job: BaseJob): string {
+  if (typeof job.location === "string") return job.location;
+  return job.location.fullAddress;
+}
+
+function getAreaDisplay(job: BaseJob): string {
+  if (typeof job.location === "string") return job.location.split(",")[0] || "";
+  return job.location.area;
+}
+
+function calculateApplicationStats(applications: Application[]) {
+  return {
+    total: applications.length,
+    pending: applications.filter((a) => a.status === "PENDING").length,
+    confirmed: applications.filter((a) => 
+      a.status === "CONFIRMED" || a.status === "BOOKED" || a.status === "ACCEPTED"
+    ).length,
+    waitlisted: 0, // Not used in Supabase schema
+    notSelected: applications.filter((a) => a.status === "REJECTED").length,
+  };
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function HirePage() {
   const { isLoggedIn, openLoginModal, user } = useAuth();
-  const { getApplicationsForJob, getJobApplicationStats, getConfirmedCount } = useApplications();
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [picked, setPicked] = useState<string[]>(["Meals provided"]);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(jobs[0]?.id || null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<BaseJob[]>([]);
+  const [applications, setApplications] = useState<Record<string, Application[]>>({});
 
-  // Seed mock applications on first load
+  // Fetch employer's jobs
   useEffect(() => {
-    const hasSeeded = sessionStorage.getItem("applications-seeded");
-    if (!hasSeeded) {
-      seedMockApplications();
-      sessionStorage.setItem("applications-seeded", "true");
+    if (!isLoggedIn || !user?.id) {
+      setLoading(false);
+      return;
     }
-  }, []);
 
+    const fetchJobs = async () => {
+      setLoading(true);
+      setError(null);
+
+      const result = await JobService.getJobs({ employerId: user.id });
+
+      if (result.success) {
+        setJobs(result.jobs);
+        if (result.jobs.length > 0 && !selectedJobId) {
+          setSelectedJobId(result.jobs[0]!.id);
+        }
+      } else {
+        setError(result.error);
+        toast.error("Failed to load jobs");
+      }
+
+      setLoading(false);
+    };
+
+    fetchJobs();
+  }, [isLoggedIn, user?.id]);
+
+  // Fetch applications for all jobs
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 900);
-    return () => clearTimeout(t);
-  }, []);
+    if (!isLoggedIn || jobs.length === 0) return;
+
+    const fetchApplications = async () => {
+      const applicationsMap: Record<string, Application[]> = {};
+
+      for (const job of jobs) {
+        const result = await ApplicationService.getJobApplications({ jobId: job.id });
+        if (result.success) {
+          applicationsMap[job.id] = result.applications;
+        }
+      }
+
+      setApplications(applicationsMap);
+    };
+
+    fetchApplications();
+  }, [isLoggedIn, jobs]);
 
   // Get applications for selected job
-  const selectedJobApplications = selectedJobId ? getApplicationsForJob(selectedJobId) : [];
-  const selectedJobStats = selectedJobId ? getJobApplicationStats(selectedJobId) : null;
+  const selectedJobApplications = selectedJobId ? (applications[selectedJobId] || []) : [];
+  const selectedJobStats = selectedJobId ? calculateApplicationStats(selectedJobApplications) : null;
   const selectedJob = jobs.find((j) => j.id === selectedJobId);
 
   function handlePostShift(e: React.FormEvent) {
@@ -173,6 +168,19 @@ function HirePage() {
     toast.success("Shift posted — verified workers nearby are being notified.");
   }
 
+  const handleStatusChange = async () => {
+    // Refresh applications when status changes
+    if (selectedJobId) {
+      const result = await ApplicationService.getJobApplications({ jobId: selectedJobId });
+      if (result.success) {
+        setApplications((prev) => ({
+          ...prev,
+          [selectedJobId]: result.applications,
+        }));
+      }
+    }
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-5 py-14 lg:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -183,7 +191,7 @@ function HirePage() {
           </h1>
           <p className="mt-3 text-muted-foreground">
             {isLoggedIn
-              ? "3 active shifts · 14 workers booked this week"
+              ? `${jobs.length} active shift${jobs.length === 1 ? "" : "s"}`
               : "Log in to post shifts and manage applicants."}
           </p>
         </div>
@@ -361,22 +369,41 @@ function HirePage() {
                   <Skeleton className="mt-5 h-9 w-28 rounded-lg" />
                 </div>
               ))
+            ) : !isLoggedIn ? (
+              <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+                <Lock className="mx-auto size-12 text-muted-foreground/50" />
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Log in to view applications
+                </p>
+                <Button
+                  variant="hero"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => openLoginModal()}
+                >
+                  Log in
+                </Button>
+              </div>
+            ) : error ? (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-8 text-center">
+                <AlertCircle className="mx-auto size-12 text-destructive" />
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {error}
+                </p>
+              </div>
+            ) : jobs.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+                <ClipboardList className="mx-auto size-12 text-muted-foreground/50" />
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No jobs posted yet. Create your first shift above!
+                </p>
+              </div>
             ) : selectedJobApplications.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
                 <ClipboardList className="mx-auto size-12 text-muted-foreground/50" />
                 <p className="mt-3 text-sm text-muted-foreground">
                   No applications yet for this job.
                 </p>
-                {!isLoggedIn && (
-                  <Button
-                    variant="hero"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => openLoginModal()}
-                  >
-                    Log in to view applications
-                  </Button>
-                )}
               </div>
             ) : (
               selectedJobApplications.map((application) => (
@@ -385,12 +412,7 @@ function HirePage() {
                   application={application}
                   viewMode="employer"
                   showActions={isLoggedIn}
-                  onStatusChange={(jobId, confirmedCount) => {
-                    // Update job positions when application status changes
-                    toast.success(`Updated: ${confirmedCount} worker(s) confirmed for this job`);
-                    // Force re-render to show updated counts
-                    setSelectedJobId(selectedJobId);
-                  }}
+                  onStatusChange={handleStatusChange}
                 />
               ))
             )}

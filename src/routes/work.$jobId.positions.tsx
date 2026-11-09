@@ -125,133 +125,28 @@ function posLabel(n: number, total: number): string {
   return String(n).padStart(digits, "0");
 }
 
-// ─── Mock data (graceful fallback when Supabase not connected) ────────────────
 
-function makeMockStats(jobId: string): JobPositionStats {
-  const cats: CategoryPositionStats[] = [
-    {
-      category_id: "cat-1",
-      category_name: "Food Serving",
-      required_workers: 5,
-      total: 5,
-      available: 5,
-      pending: 0,
-      pending_live: 0,
-      pending_expired: 0,
-      booked: 0,
-      cancelled: 0,
-      active: 5,
-      positions: [
-        { id: "p1", position_number: 1, status: "AVAILABLE", locked_until: null },
-        { id: "p2", position_number: 2, status: "AVAILABLE", locked_until: null },
-        { id: "p3", position_number: 3, status: "AVAILABLE", locked_until: null },
-        { id: "p4", position_number: 4, status: "AVAILABLE", locked_until: null },
-        { id: "p5", position_number: 5, status: "AVAILABLE", locked_until: null },
-      ],
-    },
-    {
-      category_id: "cat-2",
-      category_name: "Liquor Serving",
-      required_workers: 4,
-      total: 4,
-      available: 3,
-      pending: 1,
-      pending_live: 1,
-      pending_expired: 0,
-      booked: 0,
-      cancelled: 0,
-      active: 4,
-      positions: [
-        { id: "p6", position_number: 1, status: "AVAILABLE", locked_until: null },
-        { id: "p7", position_number: 2, status: "AVAILABLE", locked_until: null },
-        {
-          id: "p8",
-          position_number: 3,
-          status: "PENDING",
-          locked_until: new Date(Date.now() + 90_000).toISOString(),
-        },
-        { id: "p9", position_number: 4, status: "AVAILABLE", locked_until: null },
-      ],
-    },
-    {
-      category_id: "cat-3",
-      category_name: "Starters Serving",
-      required_workers: 3,
-      total: 3,
-      available: 3,
-      pending: 0,
-      pending_live: 0,
-      pending_expired: 0,
-      booked: 0,
-      cancelled: 0,
-      active: 3,
-      positions: [
-        { id: "p10", position_number: 1, status: "AVAILABLE", locked_until: null },
-        { id: "p11", position_number: 2, status: "AVAILABLE", locked_until: null },
-        { id: "p12", position_number: 3, status: "AVAILABLE", locked_until: null },
-      ],
-    },
-    {
-      category_id: "cat-4",
-      category_name: "Juice Serving",
-      required_workers: 2,
-      total: 2,
-      available: 2,
-      pending: 0,
-      pending_live: 0,
-      pending_expired: 0,
-      booked: 0,
-      cancelled: 0,
-      active: 2,
-      positions: [
-        { id: "p13", position_number: 1, status: "AVAILABLE", locked_until: null },
-        { id: "p14", position_number: 2, status: "AVAILABLE", locked_until: null },
-      ],
-    },
-  ];
-  return {
-    job_id: jobId,
-    total: 14,
-    available: 13,
-    pending: 1,
-    booked: 0,
-    cancelled: 0,
-    active: 14,
-    categories: cats,
-  };
-}
-
-function buildMockJobMeta(): JobMeta {
-  const now = Date.now();
-  const start = new Date(now + (47 * 60 + 32) * 1000);
-  const startStr = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
-  const end = new Date(now + (47 * 60 + 32 + 4 * 3600) * 1000);
-  const endStr = `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
-
-  return {
-    jobTitle: "Banquet Server",
-    venueName: "Grand Sapphire Banquets",
-    area: "Gachibowli",
-    city: "Hyderabad",
-    jobDate: TODAY_ISO,
-    startTime: startStr,
-    endTime: endStr,
-    isRapidJob: true,
-    rapidJobExpiresAt: start.toISOString(),
-    status: "Open",
-  };
-}
-
-const MOCK_JOB_META: JobMeta = buildMockJobMeta();
-
-const MOCK_WAGES: Record<string, number> = {
-  "cat-1": 1500,
-  "cat-2": 1500,
-  "cat-3": 1500,
-  "cat-4": 1500,
-};
 
 // ─── RPC wrappers ─────────────────────────────────────────────────────────────
+
+// ─── RPC error mapping ────────────────────────────────────────────────────────
+
+const RESERVE_POSITION_ERRORS: Record<string, string> = {
+  position_not_found: "This position no longer exists.",
+  position_locked_by_another_worker: "This position was just reserved by another worker.",
+  position_already_booked: "This position is already booked.",
+  position_cancelled: "This position has been cancelled.",
+  position_unavailable: "This position is no longer available.",
+  job_not_accepting: "This job is no longer accepting bookings.",
+  worker_already_has_active_application: "You already have an active application for this job.",
+  invalid_position_status: "This position is in an invalid state.",
+};
+
+const RELEASE_POSITION_ERRORS: Record<string, string> = {
+  position_not_found: "Position not found.",
+  no_active_lock: "No active hold to release.",
+  lock_owned_by_different_worker: "This position is held by another worker.",
+};
 
 async function rpcReservePosition(
   positionId: string,
@@ -509,7 +404,6 @@ function PositionSelectionPage() {
 
   // Data
   const [loading, setLoading] = useState(true);
-  const [isMock, setIsMock] = useState(false);
   const [jobMeta, setJobMeta] = useState<JobMeta | null>(null);
   const [stats, setStats] = useState<JobPositionStats | null>(null);
   const [wages, setWages] = useState<Record<string, number>>({});
@@ -549,16 +443,7 @@ function PositionSelectionPage() {
 
       const client = getSupabase();
       if (!client) {
-        const mockStats = makeMockStats(jobId);
-        const chosenCat =
-          requestedCatId && mockStats.categories.some((c) => c.category_id === requestedCatId)
-            ? requestedCatId
-            : "cat-1";
-        setJobMeta(MOCK_JOB_META);
-        setWages(MOCK_WAGES);
-        setStats(mockStats);
-        setActiveCategoryId(chosenCat);
-        setIsMock(true);
+        setDataError("Unable to connect to database. Please check your connection.");
         setLoading(false);
         return;
       }
@@ -575,16 +460,7 @@ function PositionSelectionPage() {
       if (cancelled) return;
 
       if (jobError || !jobRow) {
-        const mockStats = makeMockStats(jobId);
-        const chosenCat =
-          requestedCatId && mockStats.categories.some((c) => c.category_id === requestedCatId)
-            ? requestedCatId
-            : "cat-1";
-        setJobMeta(MOCK_JOB_META);
-        setWages(MOCK_WAGES);
-        setStats(mockStats);
-        setActiveCategoryId(chosenCat);
-        setIsMock(true);
+        setDataError(jobError?.message || "Job not found");
         setLoading(false);
         return;
       }
@@ -629,7 +505,6 @@ function PositionSelectionPage() {
           matchingCat ? requestedCatId : statsResult.data.categories[0]!.category_id,
         );
       }
-      setIsMock(false);
       setLoading(false);
     }
 

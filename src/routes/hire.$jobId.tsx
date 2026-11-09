@@ -67,7 +67,6 @@ interface WorkerProfile {
   id: string;
   name: string | null;
   avatar_url: string | null;
-  phone: string | null;
 }
 
 interface PositionRow {
@@ -125,306 +124,42 @@ interface JobDetail {
   filledPositions: number;
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
 
-function buildMockDetail(jobId: string): JobDetail {
-  const now = new Date();
-  const today = now.toISOString().split("T")[0]!;
-
-  return {
-    id: jobId,
-    job_title: "Wedding Event Staff",
-    venue_name: "Grand Sapphire Banquets",
-    area: "Gachibowli",
-    city: "Hyderabad",
-    job_date: today,
-    start_time: "19:00",
-    end_time: "23:00",
-    status: "PartiallyFilled",
-    is_rapid_job: true,
-    facilities: ["Meals", "Transport", "Uniform"],
-    categories: [
-      {
-        id: "c1",
-        name: "Food Serving",
-        required_workers: 5,
-        wage: 1200,
-        sort_order: 1,
-        booked: 3,
-        available: 1,
-        pending: 1,
-        positions: [
-          {
-            id: "p1",
-            position_number: 1,
-            status: "BOOKED",
-            worker_id: "w1",
-            application_id: "a1",
-            lock_expires_at: null,
-            worker: { name: "Rahul K.", avatar_url: null },
-          },
-          {
-            id: "p2",
-            position_number: 2,
-            status: "BOOKED",
-            worker_id: "w2",
-            application_id: "a2",
-            lock_expires_at: null,
-            worker: { name: "Sana M.", avatar_url: null },
-          },
-          {
-            id: "p3",
-            position_number: 3,
-            status: "BOOKED",
-            worker_id: "w3",
-            application_id: "a3",
-            lock_expires_at: null,
-            worker: { name: "Arjun R.", avatar_url: null },
-          },
-          {
-            id: "p4",
-            position_number: 4,
-            status: "PENDING",
-            worker_id: null,
-            application_id: null,
-            lock_expires_at: new Date(now.getTime() + 90000).toISOString(),
-            worker: null,
-          },
-          {
-            id: "p5",
-            position_number: 5,
-            status: "AVAILABLE",
-            worker_id: null,
-            application_id: null,
-            lock_expires_at: null,
-            worker: null,
-          },
-        ],
-        applicants: [
-          {
-            id: "a1",
-            worker_id: "w1",
-            job_category_id: "c1",
-            position_id: "p1",
-            status: "ACCEPTED",
-            applied_at: new Date(now.getTime() - 3600000).toISOString(),
-            confirmed_at: new Date().toISOString(),
-            worker_note: "5 years event experience.",
-            employer_note: null,
-            categoryName: "Food Serving",
-            positionNumber: 1,
-            worker: { id: "w1", name: "Rahul Kumar", avatar_url: null, phone: "+91 98765 43210" },
-          },
-          {
-            id: "a2",
-            worker_id: "w2",
-            job_category_id: "c1",
-            position_id: "p2",
-            status: "ACCEPTED",
-            applied_at: new Date(now.getTime() - 3000000).toISOString(),
-            confirmed_at: new Date().toISOString(),
-            worker_note: "Available full shift.",
-            employer_note: null,
-            categoryName: "Food Serving",
-            positionNumber: 2,
-            worker: { id: "w2", name: "Sana Mirza", avatar_url: null, phone: "+91 98765 43211" },
-          },
-          {
-            id: "a3",
-            worker_id: "w3",
-            job_category_id: "c1",
-            position_id: "p3",
-            status: "ACCEPTED",
-            applied_at: new Date(now.getTime() - 2400000).toISOString(),
-            confirmed_at: new Date().toISOString(),
-            worker_note: null,
-            employer_note: null,
-            categoryName: "Food Serving",
-            positionNumber: 3,
-            worker: { id: "w3", name: "Arjun Reddy", avatar_url: null, phone: "+91 98765 43212" },
-          },
-          {
-            id: "a4",
-            worker_id: "w4",
-            job_category_id: "c1",
-            position_id: "p4",
-            status: "PENDING",
-            applied_at: new Date(now.getTime() - 1800000).toISOString(),
-            confirmed_at: null,
-            worker_note: "Ready for any shift.",
-            employer_note: null,
-            categoryName: "Food Serving",
-            worker: { id: "w4", name: "Meena Sharma", avatar_url: null, phone: "+91 98765 43213" },
-          },
-          {
-            id: "a5",
-            worker_id: "w5",
-            job_category_id: "c1",
-            position_id: "p5",
-            status: "PENDING",
-            applied_at: new Date(now.getTime() - 900000).toISOString(),
-            confirmed_at: null,
-            worker_note: "3 years banquet experience. References available.",
-            employer_note: null,
-            categoryName: "Food Serving",
-            worker: { id: "w5", name: "Vikram Singh", avatar_url: null, phone: "+91 98765 43214" },
-          },
-        ],
-      },
-      {
-        id: "c2",
-        name: "Liquor Serving",
-        required_workers: 3,
-        wage: 1400,
-        sort_order: 2,
-        booked: 2,
-        available: 1,
-        pending: 0,
-        positions: [
-          {
-            id: "p6",
-            position_number: 1,
-            status: "BOOKED",
-            worker_id: "w6",
-            application_id: "a6",
-            lock_expires_at: null,
-            worker: { name: "Priya D.", avatar_url: null },
-          },
-          {
-            id: "p7",
-            position_number: 2,
-            status: "BOOKED",
-            worker_id: "w7",
-            application_id: "a7",
-            lock_expires_at: null,
-            worker: { name: "Dev K.", avatar_url: null },
-          },
-          {
-            id: "p8",
-            position_number: 3,
-            status: "AVAILABLE",
-            worker_id: null,
-            application_id: null,
-            lock_expires_at: null,
-            worker: null,
-          },
-        ],
-        applicants: [],
-      },
-      {
-        id: "c3",
-        name: "Starters Serving",
-        required_workers: 2,
-        wage: 1200,
-        sort_order: 3,
-        booked: 2,
-        available: 0,
-        pending: 0,
-        positions: [
-          {
-            id: "p9",
-            position_number: 1,
-            status: "BOOKED",
-            worker_id: "w8",
-            application_id: "a8",
-            lock_expires_at: null,
-            worker: { name: "Deepa L.", avatar_url: null },
-          },
-          {
-            id: "p10",
-            position_number: 2,
-            status: "BOOKED",
-            worker_id: "w9",
-            application_id: "a9",
-            lock_expires_at: null,
-            worker: { name: "Suresh P.", avatar_url: null },
-          },
-        ],
-        applicants: [],
-      },
-      {
-        id: "c4",
-        name: "Juice Serving",
-        required_workers: 2,
-        wage: 1100,
-        sort_order: 4,
-        booked: 1,
-        available: 1,
-        pending: 0,
-        positions: [
-          {
-            id: "p11",
-            position_number: 1,
-            status: "BOOKED",
-            worker_id: "w10",
-            application_id: "a10",
-            lock_expires_at: null,
-            worker: { name: "Anita K.", avatar_url: null },
-          },
-          {
-            id: "p12",
-            position_number: 2,
-            status: "AVAILABLE",
-            worker_id: null,
-            application_id: null,
-            lock_expires_at: null,
-            worker: null,
-          },
-        ],
-        applicants: [
-          {
-            id: "a11",
-            worker_id: "w11",
-            job_category_id: "c4",
-            position_id: "p12",
-            status: "PENDING",
-            applied_at: new Date(now.getTime() - 600000).toISOString(),
-            confirmed_at: null,
-            worker_note: null,
-            employer_note: null,
-            categoryName: "Juice Serving",
-            worker: { id: "w11", name: "Ravi Teja", avatar_url: null, phone: "+91 98765 43215" },
-          },
-        ],
-      },
-    ],
-    totalPositions: 12,
-    filledPositions: 8,
-  };
-}
 
 // ─── Supabase fetch ────────────────────────────────────────────────────────────
 
-async function fetchJobDetail(jobId: string): Promise<JobDetail> {
-  try {
-    const client = getSupabase();
-    if (!client) return buildMockDetail(jobId);
+async function fetchJobDetail(jobId: string): Promise<JobDetail | null> {
+  const client = getSupabase();
+  if (!client) throw new Error("Supabase client not initialized");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: job, error } = await (client as any)
-      .from("jobs")
-      .select(
-        `
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: job, error } = await (client as any)
+    .from("jobs")
+    .select(
+      `
         id, job_title, venue_name, area, city, job_date, start_time, end_time,
         status, is_rapid_job, facilities,
         job_categories (
           id, name, required_workers, wage, sort_order,
           job_positions (
             id, position_number, status, worker_id, application_id, lock_expires_at,
-            worker:public_profiles!job_positions_worker_id_fkey ( name, avatar_url )
+            worker:public_profiles!job_positions_worker_id_fkey ( id, name, avatar_url )
           ),
           applications (
             id, worker_id, job_category_id, position_id, status, applied_at, confirmed_at,
             worker_note, employer_note,
-            worker:public_profiles!applications_worker_id_fkey ( id, name, avatar_url, phone )
+            worker:public_profiles!applications_worker_id_fkey ( id, name, avatar_url )
           )
         )
       `,
-      )
-      .eq("id", jobId)
-      .single();
+    )
+    .eq("id", jobId)
+    .single();
 
-    if (error || !job) return buildMockDetail(jobId);
+  if (error || !job) {
+    console.error("Failed to fetch job detail:", error);
+    return null;
+  }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const j = job as any;
@@ -477,9 +212,6 @@ async function fetchJobDetail(jobId: string): Promise<JobDetail> {
       totalPositions: categories.reduce((s, c) => s + c.required_workers, 0),
       filledPositions: categories.reduce((s, c) => s + c.booked, 0),
     };
-  } catch {
-    return buildMockDetail(jobId);
-  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -623,12 +355,10 @@ function PositionTile({ pos, total }: { pos: PositionRow; total: number }) {
 function ApplicantCard({
   app,
   enterDelay,
-  isMock,
   onUpdate,
 }: {
   app: ApplicantRow;
   enterDelay: number;
-  isMock: boolean;
   onUpdate: (id: string, status: AppStatus) => void;
 }) {
   const [acting, setActing] = useState(false);
@@ -636,50 +366,71 @@ function ApplicantCard({
 
   async function act(newStatus: "ACCEPTED" | "REJECTED") {
     setActing(true);
-    if (!isMock) {
-      const result = await ApplicationService.updateApplicationStatus(app.id, newStatus);
-      if (!result.success) {
-        toast.error(`Action failed: ${result.error}`);
+    const client = getSupabase();
+    if (!client) {
+      toast.error("Database not available");
+      setActing(false);
+      return;
+    }
+
+    try {
+      // Call employer_update_application RPC
+      const { data, error } = await client.rpc("employer_update_application", {
+        p_application_id: app.id,
+        p_new_status: newStatus,
+      });
+
+      if (error) {
+        console.error("RPC error:", error);
+        toast.error(`Action failed: ${error.message}`);
         setActing(false);
         return;
       }
 
-      // Keep position table in sync if position is tied to this application
+      // Check RPC result
+      const result = data as { success?: boolean; error?: string } | null;
+      if (!result || !result.success) {
+        toast.error(`Action failed: ${result?.error || "Unknown error"}`);
+        setActing(false);
+        return;
+      }
+
+      // Update position table if position is tied to this application
       if (app.position_id) {
-        const client = getSupabase();
-        if (client) {
-          if (newStatus === "ACCEPTED") {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (client as any)
-              .from("job_positions")
-              .update({
-                status: "BOOKED",
-                worker_id: app.worker_id,
-                application_id: app.id,
-                lock_expires_at: null,
-              })
-              .eq("id", app.position_id);
-          } else if (newStatus === "REJECTED") {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (client as any)
-              .from("job_positions")
-              .update({
-                status: "AVAILABLE",
-                worker_id: null,
-                application_id: null,
-                lock_expires_at: null,
-              })
-              .eq("id", app.position_id)
-              .eq("worker_id", app.worker_id);
-          }
+        if (newStatus === "ACCEPTED") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (client as any)
+            .from("job_positions")
+            .update({
+              status: "BOOKED",
+              worker_id: app.worker_id,
+              application_id: app.id,
+              lock_expires_at: null,
+            })
+            .eq("id", app.position_id);
+        } else if (newStatus === "REJECTED") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (client as any)
+            .from("job_positions")
+            .update({
+              status: "AVAILABLE",
+              worker_id: null,
+              application_id: null,
+              lock_expires_at: null,
+            })
+            .eq("id", app.position_id)
+            .eq("worker_id", app.worker_id);
         }
       }
-    } else {
-      await new Promise((r) => setTimeout(r, 500));
+
+      if (newStatus === "ACCEPTED") toast.success(`${app.worker?.name ?? "Applicant"} accepted!`);
+      onUpdate(app.id, newStatus);
+    } catch (err) {
+      console.error("Exception:", err);
+      toast.error(`Action failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setActing(false);
     }
-    if (newStatus === "ACCEPTED") toast.success(`${app.worker?.name ?? "Applicant"} accepted!`);
-    onUpdate(app.id, newStatus);
-    setActing(false);
   }
 
   return (

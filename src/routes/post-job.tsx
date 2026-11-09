@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RequireAuth } from "@/components/require-auth";
 import {
   JobCategory,
   JobType,
@@ -173,6 +174,10 @@ type Form = {
   duringShiftItems: string[];
   duringShiftInput: string;
   notes: string;
+
+  // Step 6: Reporting Contact
+  reportingContactName: string;
+  reportingContactPhone: string;
 };
 
 const blankCategory: Omit<WorkCategory, "id"> = {
@@ -220,6 +225,9 @@ const INITIAL_FORM: Form = {
   duringShiftItems: [],
   duringShiftInput: "",
   notes: "",
+
+  reportingContactName: "",
+  reportingContactPhone: "",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -576,6 +584,14 @@ function CategoryEditor({ draft, onChange, onSave, onCancel, isEditing }: Catego
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 function PostJobPage() {
+  return (
+    <RequireAuth>
+      <PostJobContent />
+    </RequireAuth>
+  );
+}
+
+function PostJobContent() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const createJob = useCreateJob();
@@ -682,6 +698,10 @@ function PostJobPage() {
     if (step === 2) {
       if (form.workCategories.length === 0) errors.push("Add at least one work category");
     }
+    if (step === 5) {
+      if (form.reportingContactName.trim().length < 2) errors.push("Reporting contact name is required");
+      if (form.reportingContactPhone.trim().length < 10) errors.push("Valid reporting contact phone is required");
+    }
     return errors;
   }
 
@@ -699,7 +719,7 @@ function PostJobPage() {
       form.workCategories.length > 0,
       true, // facilities optional
       true, // requirements optional
-      true, // review
+      form.reportingContactName.trim().length > 1 && form.reportingContactPhone.trim().length >= 10, // review step with reporting contact
     ][step] ?? true;
 
   const go = useCallback(
@@ -763,6 +783,10 @@ function PostJobPage() {
           wage: cat.wage,
           requirements: cat.requirements ? { notes: cat.requirements } : undefined,
         })),
+        reportingContact: {
+          name: form.reportingContactName,
+          phone: form.reportingContactPhone,
+        },
       });
 
       toast.success("Job published!", {
@@ -2012,6 +2036,45 @@ function PostJobPage() {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Reporting Contact Section */}
+              <div className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <UserCheck className="size-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Reporting Contact</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-5">
+                  Workers will receive this contact info after booking confirmation. Keep it handy for day-of coordination.
+                </p>
+                
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="reporting-contact-name" className="font-semibold">
+                      Contact name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="reporting-contact-name"
+                      placeholder="e.g. Rahul Sharma"
+                      value={form.reportingContactName}
+                      onChange={(e) => set("reportingContactName", e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="reporting-contact-phone" className="font-semibold">
+                      Contact phone <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="reporting-contact-phone"
+                      type="tel"
+                      placeholder="e.g. +91 98765 43210"
+                      value={form.reportingContactPhone}
+                      onChange={(e) => set("reportingContactPhone", e.target.value)}
+                      className="h-11"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Publish info banner */}

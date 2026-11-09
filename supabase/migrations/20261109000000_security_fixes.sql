@@ -12,52 +12,53 @@ DROP POLICY IF EXISTS "Applications: employer can update status on own jobs" ON 
 DROP POLICY IF EXISTS "Applications: worker can cancel own" ON applications;
 
 -- Recreate profiles_select_accepted_connection with correct status check
--- Original used 'CONFIRMED' which is not a valid connection status
+-- Original used 'CONFIRMED' which is not a valid application status
 DROP POLICY IF EXISTS "profiles_select_accepted_connection" ON profiles;
 CREATE POLICY "profiles_select_accepted_connection"
-ON profiles FOR SELECT
+ON profiles
+FOR SELECT
 TO authenticated
 USING (
-  auth.uid() IS NOT NULL
-  AND (
-    -- User can see their own profile
-    id = auth.uid()
-    OR
-    -- User can see profiles of accepted connections
-    EXISTS (
-      SELECT 1 FROM connections
-      WHERE (
-        (user_id = auth.uid() AND connected_user_id = profiles.id)
+  EXISTS (
+    SELECT 1
+    FROM applications a
+    INNER JOIN jobs j ON j.id = a.job_id
+    WHERE a.status = 'ACCEPTED'  -- Fixed: was 'CONFIRMED'
+      AND (
+        -- Current user is the employer, viewing the worker
+        (j.employer_id = auth.uid() AND a.worker_id = profiles.id)
         OR
-        (connected_user_id = auth.uid() AND user_id = profiles.id)
+        -- Current user is the worker, viewing the employer
+        (a.worker_id = auth.uid() AND j.employer_id = profiles.id)
       )
-      AND status = 'ACCEPTED'  -- Fixed: was 'CONFIRMED'
-    )
   )
 );
 
 -- Recreate job_private_select with correct status check
--- Original used 'CONFIRMED' which is not a valid connection status
-DROP POLICY IF EXISTS "job_private_select" ON job_positions;
+-- Original used 'CONFIRMED' which is not a valid application status
+DROP POLICY IF EXISTS "job_private_select" ON job_private;
 CREATE POLICY "job_private_select"
-ON job_positions FOR SELECT
+ON job_private
+FOR SELECT
 TO authenticated
 USING (
-  visibility = 'private'
-  AND (
-    -- Employer can see their own private jobs
-    employer_id = auth.uid()
-    OR
-    -- Accepted connections can see private jobs
-    EXISTS (
-      SELECT 1 FROM connections
-      WHERE (
-        (user_id = auth.uid() AND connected_user_id = job_positions.employer_id)
+  EXISTS (
+    SELECT 1
+    FROM jobs j
+    WHERE j.id = job_private.job_id
+      AND (
+        -- User is the employer
+        j.employer_id = auth.uid()
         OR
-        (connected_user_id = auth.uid() AND user_id = job_positions.employer_id)
+        -- User has an ACCEPTED application on this job
+        EXISTS (
+          SELECT 1
+          FROM applications a
+          WHERE a.job_id = j.id
+            AND a.worker_id = auth.uid()
+            AND a.status = 'ACCEPTED'  -- Fixed: was 'CONFIRMED'
+        )
       )
-      AND status = 'ACCEPTED'  -- Fixed: was 'CONFIRMED'
-    )
   )
 );
 
@@ -474,3 +475,119 @@ COMMENT ON FUNCTION complete_my_shift(uuid) IS
 
 REVOKE EXECUTE ON FUNCTION complete_my_shift(uuid) FROM public;
 GRANT EXECUTE ON FUNCTION complete_my_shift(uuid) TO authenticated;
+
+
+-- ---------------------------------------------------------------------------
+-- Add is_verified column to profiles
+-- ---------------------------------------------------------------------------
+ALTER TABLE profiles 
+ADD COLUMN IF NOT EXISTS is_verified boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN profiles.is_verified IS
+  'Indicates whether the user profile has been verified. Not user-writable.';
+
+-- Note: is_verified is intentionally NOT included in the GRANT UPDATE statement
+-- so users cannot modify their own verification status
+
+-- ---------------------------------------------------------------------------
+-- Update public_profiles view to include is_verified
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE VIEW public_profiles
+WITH (security_invoker = false)
+AS
+SELECT 
+  id,
+  name,
+  avatar_url,
+  location,
+  is_verified
+FROM profiles;
+
+COMMENT ON VIEW public_profiles IS
+  'Public subset of profile data visible to all users, including verification status.';
+
+-- Ensure view permissions remain correct
+GRANT SELECT ON public_profiles TO anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- get_public_stats: Returns platform statistics
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION get_public_stats()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_open_jobs integer;
+  v_open_jobs_by_category jsonb;
+  v_registered_users integer;
+  v_positions_booked integer;
+  v_current_date date;
+  v_current_time timestamptz;
+BEGIN
+  -- Get current date and time in Asia/Kolkata timezone
+  v_current_time := now() AT TIME ZONE 'Asia/Kolkata';
+  v_current_date := v_current_time::date;
+
+  -- Count open jobs
+  -- Open = status 'Open' or 'PartiallyFilled'
+  -- job_date >= today (Asia/Kolkata)
+  -- rapid jobs must not be expired
+  SELECT COUNT(*) INTO v_open_jobs
+  FROM jobs
+  WHERE status IN ('Open', 'PartiallyFilled')
+    AND job_date >= v_current_date
+    AND (
+      is_rapid_job = false 
+      OR rapid_job_expires_at IS NULL 
+      OR rapid_job_expires_at > v_current_time
+    );
+
+  -- Count open jobs by category
+  SELECT jsonb_object_agg(category, job_count)
+  INTO v_open_jobs_by_category
+  FROM (
+    SELECT 
+      category,
+      COUNT(*) as job_count
+    FROM jobs
+    WHERE status IN ('Open', 'PartiallyFilled')
+      AND job_date >= v_current_date
+      AND (
+        is_rapid_job = false 
+        OR rapid_job_expires_at IS NULL 
+        OR rapid_job_expires_at > v_current_time
+      )
+    GROUP BY category
+  ) category_counts;
+
+  -- If no jobs, return empty object instead of null
+  IF v_open_jobs_by_category IS NULL THEN
+    v_open_jobs_by_category := '{}'::jsonb;
+  END IF;
+
+  -- Count registered users
+  SELECT COUNT(*) INTO v_registered_users
+  FROM profiles;
+
+  -- Count positions booked (status = BOOKED)
+  SELECT COUNT(*) INTO v_positions_booked
+  FROM job_positions
+  WHERE status = 'BOOKED';
+
+  RETURN jsonb_build_object(
+    'open_jobs', v_open_jobs,
+    'open_jobs_by_category', v_open_jobs_by_category,
+    'registered_users', v_registered_users,
+    'positions_booked', v_positions_booked
+  );
+END;
+$$;
+
+COMMENT ON FUNCTION get_public_stats() IS
+  'Returns public platform statistics: open jobs (with category breakdown), registered users, and booked positions.';
+
+-- Grant execute to anon and authenticated
+REVOKE EXECUTE ON FUNCTION get_public_stats() FROM public;
+GRANT EXECUTE ON FUNCTION get_public_stats() TO anon, authenticated;

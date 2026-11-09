@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth-context";
+import { getAvatarDisplay } from "@/lib/avatar-utils";
 import { cn } from "@/lib/utils";
 
 // ─── Search bar ───────────────────────────────────────────────────────────────
@@ -85,7 +86,7 @@ function UserMenu() {
         onClick={() => setOpen((o) => !o)}
         className="flex size-9 items-center justify-center rounded-lg bg-[image:linear-gradient(135deg,var(--brand),var(--brand-deep))] font-display text-sm font-bold text-primary-foreground shadow-brand transition-all duration-200 hover:scale-[1.03] hover:shadow-brand-lg"
       >
-        {user.avatar ?? "U"}
+        {getAvatarDisplay(user.avatar, user.name)}
       </button>
 
       {/* Dropdown */}

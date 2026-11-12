@@ -142,38 +142,5 @@ export function canWaitlistApplication(status: ApplicationStatusValue): boolean 
  */
 export function isApplicationFinal(status: ApplicationStatusValue): boolean {
   return status === ApplicationStatus.Confirmed || status === ApplicationStatus.NotSelected;
-}9", jobId: "2", workerNote: "Experienced kitchen helper." },
-    { workerId: "worker_10", jobId: "2", workerNote: "3 years catering experience." },
-    { workerId: "worker_11", jobId: "2" },
-    { workerId: "worker_12", jobId: "2", workerNote: "Quick learner, hard worker." },
-
-    // Job 3: Dishwashing crew (3 positions, 0 confirmed - open)
-    { workerId: "worker_13", jobId: "3", workerNote: "Available for recurring shifts." },
-    { workerId: "worker_14", jobId: "3" },
-    { workerId: "worker_15", jobId: "3", workerNote: "Live nearby, can start immediately." },
-  ];
-
-  // Submit all applications
-  const createdApps = sampleApplications
-    .map((app) => submitApplication(app))
-    .filter((result) => result.success && result.application)
-    .map((result) => result.application!);
-
-  // Job 1: Confirm 6, leave 2 pending
-  if (createdApps[0]) confirmApplication(createdApps[0].id, "Great experience!");
-  if (createdApps[1]) confirmApplication(createdApps[1].id, "Welcome aboard!");
-  if (createdApps[2]) confirmApplication(createdApps[2].id, "Perfect for this event!");
-  if (createdApps[3]) confirmApplication(createdApps[3].id);
-  if (createdApps[4]) confirmApplication(createdApps[4].id);
-  if (createdApps[5]) confirmApplication(createdApps[5].id);
-  // createdApps[6] and [7] remain Pending
-
-  // Job 2: Confirm all 4 (fully filled)
-  if (createdApps[8]) confirmApplication(createdApps[8].id, "Confirmed!");
-  if (createdApps[9]) confirmApplication(createdApps[9].id, "Confirmed!");
-  if (createdApps[10]) confirmApplication(createdApps[10].id);
-  if (createdApps[11]) confirmApplication(createdApps[11].id);
-
-  // Job 3: Leave all pending (open job)
-  // All 3 applications remain in Pending state
 }
+

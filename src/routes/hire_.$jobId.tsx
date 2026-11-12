@@ -44,7 +44,7 @@ import { ApplicationService } from "@/lib/services/application-service";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
-export const Route = createFileRoute("/hire/$jobId")({
+export const Route = createFileRoute("/hire_/$jobId")({
   head: () => ({
     meta: [
       { title: "Manage Job — QuickWork Employer" },

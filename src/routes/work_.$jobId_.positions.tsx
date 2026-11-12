@@ -51,7 +51,7 @@ import { ApplicationService } from "@/lib/services/application-service";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
-export const Route = createFileRoute("/work/$jobId/positions")({
+export const Route = createFileRoute("/work_/$jobId_/positions")({
   validateSearch: (search: Record<string, unknown>): { cat?: string } => {
     const cat = typeof search["cat"] === "string" ? search["cat"] : undefined;
     return cat !== undefined ? { cat } : {};

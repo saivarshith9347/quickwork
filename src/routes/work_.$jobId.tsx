@@ -46,7 +46,7 @@ import {
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
-export const Route = createFileRoute("/work/$jobId")({
+export const Route = createFileRoute("/work_/$jobId")({
   head: () => ({
     meta: [
       { title: "Job Details — QuickWork" },

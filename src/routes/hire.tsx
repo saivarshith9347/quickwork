@@ -159,13 +159,60 @@ function HirePage() {
   const selectedJobStats = selectedJobId ? calculateApplicationStats(selectedJobApplications) : null;
   const selectedJob = jobs.find((j) => j.id === selectedJobId);
 
-  function handlePostShift(e: React.FormEvent) {
+  const [posting, setPosting] = useState(false);
+
+  async function handlePostShift(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !user?.id) {
       openLoginModal({ type: "post-shift" });
       return;
     }
+
+    const formEl = e.currentTarget;
+    const fd = new FormData(formEl);
+    const title = String(fd.get("title") ?? "").trim();
+    const date = String(fd.get("date") ?? "");
+    const startTime = String(fd.get("startTime") ?? "");
+    const endTime = String(fd.get("endTime") ?? "");
+    const locationRaw = String(fd.get("location") ?? "").trim();
+    const workers = Number(fd.get("workers"));
+    const wage = Number(fd.get("wage"));
+
+    const parts = locationRaw.split(",").map((s) => s.trim()).filter(Boolean);
+    const venueName = parts[0] ?? locationRaw;
+    const area = parts[1] ?? parts[0] ?? locationRaw;
+    const city = parts[parts.length - 1] ?? locationRaw;
+
+    setPosting(true);
+    const result = await JobService.createJob({
+      job: {
+        employerId: user.id,
+        jobTitle: title,
+        category: "Other",
+        description: `${title} shift at ${locationRaw}`,
+        location: { venueName, fullAddress: locationRaw, area, city },
+        date,
+        startTime,
+        endTime,
+        facilities: picked.length > 0 ? picked : undefined,
+      },
+      categories: [{ name: title, requiredWorkers: workers, wage }],
+    });
+    setPosting(false);
+
+    if (!result.success) {
+      toast.error("Failed to post shift", { description: result.error });
+      return;
+    }
+
     toast.success("Shift posted — verified workers nearby are being notified.");
+    formEl.reset();
+
+    const refreshed = await JobService.getJobs({ employerId: user.id });
+    if (refreshed.success) {
+      setJobs(refreshed.jobs);
+      setSelectedJobId(result.jobId);
+    }
   }
 
   const handleStatusChange = async () => {
@@ -231,32 +278,40 @@ function HirePage() {
         >
           <h2 className="text-2xl">Post a shift</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Six fields. Workers see it instantly. Prefer a guided flow?{" "}
+            Quick form. Workers see it instantly. Prefer a guided flow?{" "}
             <Link to="/post-job" className="font-semibold text-primary hover:underline">
               Use the 4-step wizard
             </Link>
           </p>
 
           <div className="mt-7 grid gap-5 sm:grid-cols-2">
-            <div className="grid gap-2">
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="title">Role</Label>
+              <Input id="title" name="title" placeholder="e.g. Banquet server" minLength={3} required />
+            </div>
+            <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="date">Date</Label>
-              <Input id="date" type="date" required />
+              <Input id="date" name="date" type="date" min={new Date().toISOString().split("T")[0]} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="time">Start time</Label>
-              <Input id="time" type="time" required />
+              <Input id="time" name="startTime" type="time" required />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="endTime">End time</Label>
+              <Input id="endTime" name="endTime" type="time" required />
             </div>
             <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="location">Location</Label>
-              <Input id="location" placeholder="Venue name, area" required />
+              <Input id="location" name="location" placeholder="Venue name, area, city" required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="workers">Workers needed</Label>
-              <Input id="workers" type="number" min={1} defaultValue={4} required />
+              <Input id="workers" name="workers" type="number" min={1} defaultValue={4} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="wage">Wage per shift (₹)</Label>
-              <Input id="wage" type="number" min={0} step={50} defaultValue={1200} required />
+              <Input id="wage" name="wage" type="number" min={1} step={50} defaultValue={1200} required />
             </div>
           </div>
 
@@ -283,8 +338,12 @@ function HirePage() {
             </div>
           </fieldset>
 
-          <Button type="submit" variant="hero" size="lg" className="mt-8 w-full">
-            {isLoggedIn ? (
+          <Button type="submit" variant="hero" size="lg" className="mt-8 w-full" disabled={posting}>
+            {posting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" /> Posting…
+              </>
+            ) : isLoggedIn ? (
               <>
                 <Plus /> Post shift
               </>
@@ -472,7 +531,7 @@ function HirePage() {
                       </div>
 
                       {/* Application Stats */}
-                      {jobStats.total > 0 && (
+                      {jobStats && jobStats.total > 0 && (
                         <div className="mt-4 flex items-center gap-2">
                           <ClipboardList className="size-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">

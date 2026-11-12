@@ -311,7 +311,7 @@ export function useCancelApplication() {
 
 interface UpdateApplicationStatusParams {
   applicationId: string;
-  status: ApplicationStatus;
+  status: "ACCEPTED" | "REJECTED" | "COMPLETED";
   note?: string;
 }
 
@@ -320,7 +320,7 @@ export function useUpdateApplicationStatus() {
 
   return useMutation({
     mutationFn: async ({ applicationId, status, note }: UpdateApplicationStatusParams) => {
-      const result = await ApplicationService.updateApplicationStatus(applicationId, status, note);
+      const result = await ApplicationService.employerUpdateApplication(applicationId, status, note);
       if (!result.success) {
         throw new Error(result.error);
       }

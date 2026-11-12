@@ -58,6 +58,7 @@ function DashboardContent() {
     queryKey: ["worker-shifts-completed", user.id],
     queryFn: async () => {
       const supabase = getSupabase();
+      if (!supabase) throw new Error("Supabase not configured");
       const { count, error } = await supabase
         .from("applications")
         .select("*", { count: "exact", head: true })
@@ -73,7 +74,8 @@ function DashboardContent() {
     queryKey: ["employer-jobs-posted", user.id],
     queryFn: async () => {
       const supabase = getSupabase();
-      const { count, error } = await supabase
+      if (!supabase) throw new Error("Supabase not configured");
+      const { count, error} = await supabase
         .from("jobs")
         .select("*", { count: "exact", head: true })
         .eq("employer_id", user.id);
@@ -87,6 +89,7 @@ function DashboardContent() {
     queryKey: ["employer-workers-hired", user.id],
     queryFn: async () => {
       const supabase = getSupabase();
+      if (!supabase) throw new Error("Supabase not configured");
       const { data: jobs, error: jobsError } = await supabase
         .from("jobs")
         .select("id")
@@ -121,7 +124,7 @@ function DashboardContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {user.is_verified && <VerifiedBadge label="Verified" tone="success" />}
+          {user.isVerified && <VerifiedBadge label="Verified" tone="success" />}
         </div>
       </div>
 

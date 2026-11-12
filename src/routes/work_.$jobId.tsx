@@ -467,9 +467,10 @@ function JobDetailsPage() {
   const bookedPositions = job.positionsConfirmed;
   const availablePositions = job.positionsRemaining;
   const isFull = availablePositions === 0 && totalPositions > 0;
-  const isExpired =
+  const isExpired: boolean = !!(
     job.isRapidJob &&
-    (isCutoff || (job.rapidJobExpiresAt && new Date(job.rapidJobExpiresAt) < new Date()));
+    (isCutoff || (job.rapidJobExpiresAt && new Date(job.rapidJobExpiresAt) < new Date()))
+  );
   const isCancelled = job.status === "Cancelled";
   const isJobClosed = isCancelled || isExpired || isCutoff;
 
@@ -936,6 +937,7 @@ function JobDetailsPage() {
                 wageText={wageText}
                 isFull={isFull}
                 isJobClosed={!!isJobClosed}
+                isExpired={isExpired}
                 alreadyApplied={alreadyApplied}
                 isLoggedIn={isLoggedIn}
                 onApply={handleApply}
@@ -991,6 +993,7 @@ function JobDetailsPage() {
               job={job}
               isFull={isFull}
               isJobClosed={!!isJobClosed}
+              isExpired={isExpired}
               alreadyApplied={alreadyApplied}
               isLoggedIn={isLoggedIn}
               onApply={handleApply}
@@ -1010,6 +1013,7 @@ function BookingPanel({
   wageText,
   isFull,
   isJobClosed,
+  isExpired,
   alreadyApplied,
   isLoggedIn,
   onApply,
@@ -1018,6 +1022,7 @@ function BookingPanel({
   wageText: string;
   isFull: boolean;
   isJobClosed: boolean;
+  isExpired: boolean;
   alreadyApplied: boolean;
   isLoggedIn: boolean;
   onApply: () => void;
@@ -1067,6 +1072,7 @@ function BookingPanel({
           job={job}
           isFull={isFull}
           isJobClosed={isJobClosed}
+          isExpired={isExpired}
           alreadyApplied={alreadyApplied}
           isLoggedIn={isLoggedIn}
           onApply={onApply}
@@ -1098,6 +1104,7 @@ function CtaButton({
   job,
   isFull,
   isJobClosed,
+  isExpired,
   alreadyApplied,
   isLoggedIn,
   onApply,
@@ -1106,6 +1113,7 @@ function CtaButton({
   job: BaseJob;
   isFull: boolean;
   isJobClosed: boolean;
+  isExpired: boolean;
   alreadyApplied: boolean;
   isLoggedIn: boolean;
   onApply: () => void;

@@ -25,6 +25,7 @@ export interface AuthUser {
   phone: string | null;
   email: string | null;
   profileComplete: boolean;
+  isVerified?: boolean;
   /** Avatar URL only - never contains initials */
   avatar?: string | undefined;
   location?: string | undefined;
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone: profile?.phone || authUser.phone || null,
         email: profile?.email || authUser.email || null,
         profileComplete: profile?.profile_complete || false,
+        isVerified: profile?.is_verified || false,
         // avatar_url should only contain actual URLs, never initials
         avatar: profile?.avatar_url || undefined,
         location: profile?.location || undefined,

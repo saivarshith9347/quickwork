@@ -242,7 +242,7 @@ function HirePage() {
               : "Log in to post shifts and manage applicants."}
           </p>
         </div>
-        {isLoggedIn && user?.is_verified && <VerifiedBadge label="Verified" tone="success" />}
+        {isLoggedIn && user?.isVerified && <VerifiedBadge label="Verified" tone="success" />}
       </div>
 
       {/* Gate banner for logged-out visitors */}

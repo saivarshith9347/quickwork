@@ -160,7 +160,7 @@ export function LoginModal() {
   };
 
   const headline =
-    pendingAction && pendingLabel[pendingAction.type]
+    pendingAction?.type && pendingLabel[pendingAction.type]
       ? pendingLabel[pendingAction.type]
       : "Welcome to QuickWork";
 

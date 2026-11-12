@@ -814,14 +814,14 @@ function WorkPage() {
                 ? "Try adjusting your search or filters to see more results"
                 : "Check back soon for new opportunities"
             }
-            action={
-              filtersActive
-                ? {
+            {...(filtersActive
+              ? {
+                  action: {
                     label: "Clear filters",
                     onClick: clearAll,
-                  }
-                : undefined
-            }
+                  },
+                }
+              : {})}
           />
         ) : (
           <>

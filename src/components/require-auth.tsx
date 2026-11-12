@@ -92,7 +92,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
   }
 
   // Profile incomplete: navigating to complete-profile (handled by useEffect)
-  if (!profileComplete) {
+  if (!user.profileComplete) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="animate-pulse space-y-6">

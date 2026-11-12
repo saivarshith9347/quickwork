@@ -1113,6 +1113,17 @@ function CtaButton({
 }) {
   // For open jobs, authenticated users go straight to the position-selection screen
   const jobIdParam = job.id;
+  const { user } = useAuth();
+  if (user?.id && user.id === job.employerId) {
+    return (
+      <Button variant="hero" size="lg" className={className} asChild>
+        <Link to="/hire/$jobId" params={{ jobId: jobIdParam }}>
+          <Users className="size-4" aria-hidden="true" />
+          Manage applicants
+        </Link>
+      </Button>
+    );
+  }
   if (alreadyApplied) {
     return (
       <Button variant="secondary" size="lg" disabled className={className}>
@@ -1132,11 +1143,15 @@ function CtaButton({
   }
 
   if (isJobClosed) {
-    const closedReason = job.status === "Cancelled" 
-      ? "Job Cancelled" 
-      : isExpired 
-        ? "Rapid Job Expired" 
-        : "Applications Closed";
+    // isExpired lives in the parent component; derive it locally
+    const isExpired =
+      job.isRapidJob && !!job.rapidJobExpiresAt && new Date(job.rapidJobExpiresAt) < new Date();
+    const closedReason =
+      job.status === "Cancelled"
+        ? "Job Cancelled"
+        : isExpired
+          ? "Rapid Job Expired"
+          : "Applications Closed";
     
     return (
       <Button variant="outline" size="lg" disabled className={className}>

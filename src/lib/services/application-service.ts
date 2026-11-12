@@ -79,6 +79,16 @@ function dbApplicationToApplication(dbApp: any): Application {
 
 // ─── Service Class ────────────────────────────────────────────────────────────
 
+const EMPLOYER_UPDATE_ERRORS: Record<string, string> = {
+  application_not_pending: "This request was already handled or withdrawn.",
+  cannot_reject_status: "This application can no longer be rejected.",
+  application_not_accepted: "Only accepted applications can be completed.",
+  not_job_employer: "Only the job's employer can do this.",
+  job_cancelled: "This job has been cancelled.",
+  application_not_found: "Application not found.",
+  not_authenticated: "Please sign in again.",
+};
+
 export class ApplicationService {
   /**
    * Reserve a position for a job application.
@@ -503,14 +513,22 @@ export class ApplicationService {
 
     try {
       const { data, error } = await supabase.rpc("employer_update_application", {
-        application_id: applicationId,
-        new_status: newStatus,
-        employer_note_text: note || null,
+        p_application_id: applicationId,
+        p_status: newStatus,
+        ...(note ? { p_note: note } : {}),
       });
 
       if (error) {
         console.error("Failed to update application:", error);
         return { success: false, error: error.message };
+      }
+
+      const res = data as { success?: boolean; error?: string } | null;
+      if (!res || !res.success) {
+        return {
+          success: false,
+          error: EMPLOYER_UPDATE_ERRORS[res?.error ?? ""] ?? res?.error ?? "Failed to update application",
+        };
       }
 
       return { success: true };

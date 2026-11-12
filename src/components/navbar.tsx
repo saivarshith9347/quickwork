@@ -1,6 +1,5 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import {
-  Bell,
   BriefcaseBusiness,
   ClipboardList,
   LogOut,
@@ -13,6 +12,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth-context";
 import { getAvatarDisplay } from "@/lib/avatar-utils";
@@ -65,18 +65,7 @@ function UserMenu() {
   return (
     <div className="relative flex items-center gap-2" ref={ref}>
       {/* Notifications bell */}
-      <button
-        type="button"
-        aria-label="Notifications"
-        className="relative flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-all duration-200 hover:border-primary hover:text-primary hover:scale-[1.03]"
-      >
-        <Bell className="size-4" />
-        {/* Unread dot */}
-        <span
-          className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary"
-          aria-hidden="true"
-        />
-      </button>
+      <NotificationsBell userId={user.id} />
 
       {/* Avatar */}
       <button

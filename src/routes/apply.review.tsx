@@ -112,6 +112,13 @@ const CONFIRM_BOOKING_ERRORS: Record<string, string> = {
   position_unavailable: "This position is no longer available.",
   lock_owned_by_different_worker: "Another worker holds this position.",
   lock_expired: "Your 2-minute hold expired. Please select again.",
+  // Codes actually returned by the confirm_booking RPC
+  position_not_pending: "Your hold on this position was released. Please select it again.",
+  not_locked_by_you: "Another worker holds this position.",
+  already_applied: "You already have an application for this job.",
+  job_cancelled: "This job has been cancelled by the employer.",
+  job_not_found: "This job no longer exists.",
+  not_authenticated: "Please sign in again to confirm.",
 };
 
 // ─── Lock countdown ───────────────────────────────────────────────────────────
@@ -594,6 +601,8 @@ function ReviewPage() {
               <p className="font-semibold text-destructive">{confirmError}</p>
               {(errorCode === "lock_expired" ||
                 errorCode === "no_active_lock" ||
+                errorCode === "position_not_pending" ||
+                errorCode === "not_locked_by_you" ||
                 errorCode === "position_already_booked" ||
                 errorCode === "position_unavailable") && (
                 <div className="mt-3">
@@ -627,8 +636,8 @@ function ReviewPage() {
         >
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success/70" aria-hidden="true" />
           <p>
-            By confirming, you commit to attending this shift. Your position is reserved atomically
-            — no two workers can book the same position.
+            Sending a request holds this position for you while the employer reviews it. You're
+            booked once they accept — no two workers can hold the same position.
           </p>
         </div>
       </div>
@@ -678,7 +687,7 @@ function ReviewPage() {
               ) : (
                 <>
                   <CheckCircle2 className="size-4" aria-hidden="true" />
-                  Confirm Application
+                  Send Request
                   <ArrowRight className="size-4 ml-0.5" aria-hidden="true" />
                 </>
               )}

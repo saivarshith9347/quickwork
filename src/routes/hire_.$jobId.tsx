@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   Star,
   User,
+  UserMinus,
   Users,
   XCircle,
   Zap,
@@ -109,6 +110,7 @@ interface CategoryRow {
 
 interface JobDetail {
   id: string;
+  employer_id: string;
   job_title: string;
   venue_name: string;
   area: string;
@@ -137,7 +139,7 @@ async function fetchJobDetail(jobId: string): Promise<JobDetail | null> {
     .from("jobs")
     .select(
       `
-        id, job_title, venue_name, area, city, job_date, start_time, end_time,
+        id, employer_id, job_title, venue_name, area, city, job_date, start_time, end_time,
         status, is_rapid_job, facilities,
         job_categories (
           id, name, required_workers, wage, sort_order,
@@ -198,6 +200,7 @@ async function fetchJobDetail(jobId: string): Promise<JobDetail | null> {
 
     return {
       id: j.id,
+      employer_id: j.employer_id,
       job_title: j.job_title,
       venue_name: j.venue_name,
       area: j.area,
@@ -362,75 +365,28 @@ function ApplicantCard({
   onUpdate: (id: string, status: AppStatus) => void;
 }) {
   const [acting, setActing] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const cfg = APP_CFG[app.status];
 
+  // All state changes go through the employer_update_application RPC, which
+  // also updates the position (BOOKED on accept, AVAILABLE on reject/remove).
   async function act(newStatus: "ACCEPTED" | "REJECTED") {
+    const wasAccepted = app.status === "ACCEPTED";
     setActing(true);
-    const client = getSupabase();
-    if (!client) {
-      toast.error("Database not available");
-      setActing(false);
+    const res = await ApplicationService.employerUpdateApplication(app.id, newStatus);
+    setActing(false);
+    setConfirmRemove(false);
+
+    if (!res.success) {
+      toast.error("Action failed", { description: res.error });
       return;
     }
 
-    try {
-      // Call employer_update_application RPC
-      const { data, error } = await client.rpc("employer_update_application", {
-        p_application_id: app.id,
-        p_status: newStatus,
-      });
-
-      if (error) {
-        console.error("RPC error:", error);
-        toast.error(`Action failed: ${error.message}`);
-        setActing(false);
-        return;
-      }
-
-      // Check RPC result
-      const result = data as { success?: boolean; error?: string } | null;
-      if (!result || !result.success) {
-        toast.error(`Action failed: ${result?.error || "Unknown error"}`);
-        setActing(false);
-        return;
-      }
-
-      // Update position table if position is tied to this application
-      if (app.position_id) {
-        if (newStatus === "ACCEPTED") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (client as any)
-            .from("job_positions")
-            .update({
-              status: "BOOKED",
-              worker_id: app.worker_id,
-              application_id: app.id,
-              lock_expires_at: null,
-            })
-            .eq("id", app.position_id);
-        } else if (newStatus === "REJECTED") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (client as any)
-            .from("job_positions")
-            .update({
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-            })
-            .eq("id", app.position_id)
-            .eq("worker_id", app.worker_id);
-        }
-      }
-
-      if (newStatus === "ACCEPTED") toast.success(`${app.worker?.name ?? "Applicant"} accepted!`);
-      onUpdate(app.id, newStatus);
-    } catch (err) {
-      console.error("Exception:", err);
-      toast.error(`Action failed: ${err instanceof Error ? err.message : "Unknown error"}`);
-    } finally {
-      setActing(false);
-    }
+    const name = app.worker?.name ?? "Applicant";
+    if (newStatus === "ACCEPTED") toast.success(`${name} is booked for this shift`);
+    else if (wasAccepted) toast.success(`${name} was removed from this shift`);
+    else toast.success(`Request from ${name} declined`);
+    onUpdate(app.id, newStatus);
   }
 
   return (
@@ -537,12 +493,48 @@ function ApplicantCard({
           </button>
         </div>
       )}
-      {(app.status === "ACCEPTED" || app.status === "REJECTED") && (
+      {app.status === "ACCEPTED" &&
+        (confirmRemove ? (
+          <div className="flex items-center gap-2 border-t border-destructive/30 bg-destructive/[0.04] px-4 py-2.5">
+            <p className="flex-1 text-xs font-medium text-destructive">
+              Remove {app.worker?.name ?? "this worker"} and reopen the position?
+            </p>
+            <button
+              type="button"
+              disabled={acting}
+              onClick={() => setConfirmRemove(false)}
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted disabled:opacity-50"
+            >
+              Keep
+            </button>
+            <button
+              id={`remove-${app.id}`}
+              type="button"
+              disabled={acting}
+              onClick={() => act("REJECTED")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {acting ? <Loader2 className="size-3.5 animate-spin" /> : <UserMinus className="size-3.5" />}
+              Remove
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center border-t border-border px-4 py-2">
+            <p className="flex-1 text-xs text-muted-foreground/70">✓ Booked for this shift</p>
+            <button
+              type="button"
+              onClick={() => setConfirmRemove(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-destructive/[0.06] hover:text-destructive"
+            >
+              <UserMinus className="size-3.5" />
+              Remove from shift
+            </button>
+          </div>
+        ))}
+      {app.status === "REJECTED" && (
         <div className="border-t border-border px-4 py-2.5">
           <p className="text-center text-xs text-muted-foreground/70">
-            {app.status === "ACCEPTED"
-              ? "✓ Worker has been notified"
-              : "✗ Worker has been declined"}
+            {app.confirmed_at ? "✗ Removed from this shift" : "✗ Worker has been declined"}
           </p>
         </div>
       )}
@@ -741,23 +733,30 @@ function HireJobPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
-  const handleAppUpdate = useCallback((catId: string, appId: string, status: AppStatus) => {
-    setJob((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        categories: prev.categories.map((cat) =>
-          cat.id !== catId
-            ? cat
-            : {
-                ...cat,
-                applicants: cat.applicants.map((a) => (a.id === appId ? { ...a, status } : a)),
-                booked: status === "ACCEPTED" ? cat.booked + 1 : cat.booked,
-              },
-        ),
-      };
-    });
-  }, []);
+  const handleAppUpdate = useCallback(
+    (catId: string, appId: string, status: AppStatus) => {
+      // Optimistic status flip, then refetch so position tiles and fill
+      // counts reflect what the RPC actually did (book / free the seat).
+      setJob((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          categories: prev.categories.map((cat) =>
+            cat.id !== catId
+              ? cat
+              : {
+                  ...cat,
+                  applicants: cat.applicants.map((a) => (a.id === appId ? { ...a, status } : a)),
+                },
+          ),
+        };
+      });
+      void fetchJobDetail(jobId).then((fresh) => {
+        if (fresh) setJob(fresh);
+      });
+    },
+    [jobId],
+  );
 
   if (!isLoggedIn) {
     return (
@@ -783,6 +782,25 @@ function HireJobPage() {
             <div key={i} className="h-48 animate-pulse rounded-3xl bg-muted/40" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  // Only the job owner can manage applicants. (RLS + the
+  // employer_update_application RPC enforce this server-side too.)
+  if (user?.id !== job.employer_id) {
+    return (
+      <div className="mx-auto max-w-3xl px-5 py-20 text-center">
+        <ShieldCheck className="mx-auto size-12 text-muted-foreground/30" />
+        <h2 className="mt-4 text-xl font-bold">Only the job owner can manage this job</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          You can still view the listing and apply as a worker.
+        </p>
+        <Button variant="hero" className="mt-6" asChild>
+          <Link to="/work/$jobId" params={{ jobId }}>
+            View job
+          </Link>
+        </Button>
       </div>
     );
   }

@@ -225,7 +225,7 @@ function SuccessPage() {
           }}
         >
           <h1 className="mt-6 font-display text-3xl font-bold sm:text-4xl">
-            Application Submitted
+            Request Sent
           </h1>
           <p className="mt-2 text-base font-semibold text-primary">
             {b.categoryName} · Position {posNum}
@@ -234,7 +234,7 @@ function SuccessPage() {
           {b.isRapidJob && (
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-600 dark:text-orange-400">
               <span className="inline-block size-2 rounded-full bg-orange-500 animate-pulse" />⚡
-              Rapid Job Confirmed
+              Rapid Job Request
             </div>
           )}
         </div>
@@ -305,7 +305,8 @@ function SuccessPage() {
       >
         <p className="font-semibold text-foreground">What happens next?</p>
         <ul className="mt-2 space-y-1.5 text-xs leading-relaxed">
-          <li>✓ Your position is confirmed and reserved</li>
+          <li>✓ Your position is held while the employer reviews your request</li>
+          <li>✓ You'll get a notification (bell icon) when they accept</li>
           <li>✓ Report to the venue 30 minutes before shift start</li>
           <li>✓ Wage paid via UPI within 24 hours of completion</li>
         </ul>

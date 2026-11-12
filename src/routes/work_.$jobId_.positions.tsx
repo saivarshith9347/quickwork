@@ -618,14 +618,19 @@ function PositionSelectionPage() {
   }, [jobId]);
 
   // ── Release position lock when leaving page ────────────────────────────────
+  // Runs only on unmount. Skipped when handing the hold off to /apply/review,
+  // otherwise the lock is released before confirm_booking runs and the RPC
+  // fails with "position_not_pending". Switching positions releases explicitly
+  // in handlePositionClick, so no dependency on `selection` is needed here.
+  const handingOffRef = useRef(false);
   useEffect(() => {
     return () => {
-      // Cleanup on unmount - release any held position
-      if (selection?.positionId && currentWorkerId) {
-        void rpcReleasePosition(selection.positionId);
+      const held = selectionRef.current;
+      if (held?.positionId && !handingOffRef.current) {
+        void rpcReleasePosition(held.positionId);
       }
     };
-  }, [selection, currentWorkerId]);
+  }, []);
 
   // ── Scroll active tab into view ────────────────────────────────────────────
   useEffect(() => {
@@ -780,6 +785,7 @@ function PositionSelectionPage() {
         rapidJobExpiresAt: jobMeta?.rapidJobExpiresAt,
       }),
     );
+    handingOffRef.current = true;
     void navigate({ to: "/apply/review" });
   };
 

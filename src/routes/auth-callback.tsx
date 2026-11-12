@@ -20,27 +20,43 @@ function AuthCallback() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[AuthCallback] State:', { user: !!user, loading, pendingAction });
+
     // Check for error in URL parameters
     const params = new URLSearchParams(window.location.search);
     const errorDescription = params.get("error_description");
+    const error = params.get("error");
     
-    if (errorDescription) {
-      setErrorMessage(decodeURIComponent(errorDescription));
+    if (errorDescription || error) {
+      const message = errorDescription 
+        ? decodeURIComponent(errorDescription)
+        : error
+        ? decodeURIComponent(error)
+        : "Authentication failed";
+      console.error('[AuthCallback] Error from URL:', message);
+      setErrorMessage(message);
       return;
     }
 
     // Wait for auth state to settle - both loading must be false AND user must be resolved
-    if (loading) return;
+    if (loading) {
+      console.log('[AuthCallback] Still loading...');
+      return;
+    }
 
     if (user) {
+      console.log('[AuthCallback] User authenticated:', user.id);
+      
       // Determine redirect destination
       let destination = "/dashboard";
 
       if (!user.profileComplete) {
         // Profile incomplete - always go to complete profile first
+        console.log('[AuthCallback] Profile incomplete, redirecting to complete-profile');
         destination = "/complete-profile";
       } else if (pendingAction) {
         // Profile complete and there's a saved pending action
+        console.log('[AuthCallback] Has pending action:', pendingAction.type);
         switch (pendingAction.type) {
           case "book-shift":
             destination = pendingAction.payload 
@@ -61,10 +77,12 @@ function AuthCallback() {
         clearPendingAction();
       }
 
+      console.log('[AuthCallback] Redirecting to:', destination);
       // Use router navigation instead of window.location
       navigate({ to: destination });
     } else {
       // No user after loading complete - auth failed
+      console.warn('[AuthCallback] No user found after loading, redirecting to home');
       navigate({ to: "/" });
     }
   }, [user, loading, pendingAction, clearPendingAction, navigate]);

@@ -31,7 +31,9 @@ export interface AuthUser {
 }
 
 export interface PendingAction {
-  type: "book-shift" | "post-shift" | "message" | "dashboard";
+  type?: "book-shift" | "post-shift" | "message" | "dashboard" | "resume" | undefined;
+  action?: string | undefined;
+  path?: string | undefined;
   payload?: unknown;
 }
 

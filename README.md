@@ -1,122 +1,73 @@
-# QuickWork Connect
+# QuickWork
 
-Build a web app called "QuickWork" — a smart workforce booking platform
+A workforce booking platform connecting businesses with verified daily-wage workers for short-term employment. Supports job categories including catering, warehousing, logistics, retail, events, and housekeeping.
 
-connecting businesses with verified daily-wage workers for instant,
+**Tech Stack**: TanStack Start (React), TypeScript, Tailwind CSS, Supabase (auth + database), Nitro (server)
 
-short-term employment. Initial focus: catering industry, expandable to
+Built with [Lovable](https://lovable.dev) | **Live app**: https://swift-team-up.lovable.app
 
-warehousing, logistics, retail, events, and housekeeping.
+---
 
-DESIGN SYSTEM (strict — use these exact values):
+## Deployment
 
-- Primary Orange: #F26B1D
+### Deploy to Vercel
 
-- Deep Orange/Red: #D62E1F
+1. **Import your repository** in the [Vercel Dashboard](https://vercel.com/new)
 
-- Sun Gold accent: #FFB627
+2. **Configure environment variables** (Project Settings → Environment Variables):
+   
+   Add these variables for **both Production and Preview** environments:
+   
+   - `VITE_SUPABASE_URL` — Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` — Your Supabase anon/public key
+   - `NITRO_PRESET` — Set to `vercel`
 
-- Ink Black (dark bg): #14100E
+3. **Deploy** — Vercel will automatically build and deploy your app
 
-- Charcoal (dark cards): #221D1A
+### Supabase Setup Checklist
 
-- Off-White (light bg): #FFF8F1
+Before your app can work in production, complete these steps in your Supabase project:
 
-- Success Green: #2FA84F
+#### 1. Authentication Configuration
+- [ ] **Enable Email provider** (Supabase Dashboard → Authentication → Providers → Email)
+- [ ] **Configure site URL**: Set to your production domain (e.g., `https://your-app.vercel.app`)
+- [ ] **Add redirect URLs**: Add your production URL to the allow list
+  - Production: `https://your-app.vercel.app/auth-callback`
+  - Preview: `https://*.vercel.app/auth-callback` (for preview deployments)
 
-- Headings font: Sora (bold weights)
+#### 2. Optional: Enable OAuth Providers
+- [ ] **Google Sign-In**: Add Client ID & Secret under Authentication → Providers → Google
+  - Set authorized redirect: `https://<your-ref>.supabase.co/auth/v1/callback`
+- [ ] **Phone/SMS OTP**: Configure SMS provider (Twilio, etc.) under Providers → Phone
 
-- Body font: Inter
+#### 3. Database Setup
+- [ ] **Run migrations**: Apply the database schema from `supabase/migrations/`
+  - Use Supabase CLI: `npx supabase db push`
+  - Or manually via SQL Editor in Supabase Dashboard
+- [ ] **Verify RLS policies**: Ensure Row Level Security policies are enabled on all tables
+- [ ] **Test database connection**: Verify your app can read/write data with the anon key
 
-- Border radius: 12-16px, not fully rounded
+#### 4. Post-Deployment Verification
+- [ ] Test user sign-up and login flows
+- [ ] Verify job posting and application workflows
+- [ ] Check that RLS policies enforce proper data access
+- [ ] Confirm environment variables are set correctly (check Vercel logs if issues)
 
-- Support both LIGHT and DARK mode with a toggle in the top nav
+### Troubleshooting
 
-  (persist user choice). Dark mode = charcoal backgrounds with orange
+**Build fails with Supabase errors:**
+- Ensure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set for Preview deployments
+- Check that `NITRO_PRESET=vercel` is configured
 
-  glow accents, not pure black. Light mode = warm off-white, not
+**Auth redirects fail:**
+- Verify your production URL is added to Supabase redirect URL allow list
+- Check that site URL matches your deployment domain
 
-  sterile white.
+**Data access errors:**
+- Confirm RLS policies are enabled and correctly configured
+- Verify your migrations have been applied to the production database
 
-BRAND FEEL: Bold, energetic, trustworthy — like a modern gig-economy
-
-app (think Swiggy/Ola-level polish) crossed with a professional
-
-verification service. Should feel exciting and modern to young users
-
-(18-30) but instantly trustworthy to business owners.
-
-CORE STRUCTURE:
-
-1. Landing page with a hero section using an orange-to-black gradient
-
-   mesh background. Headline should communicate speed + trust. Below
-
-   hero, a clear two-path split: "I'm Hiring" vs "I'm Looking for Work"
-
-   as two large, distinct cards with hover animations (subtle scale +
-
-   glow).
-
-2. Navbar: logo left, nav links center, dark/light toggle + Sign In/
-
-   Get Started on right. Sticky on scroll with a subtle blur background.
-
-3. "How It Works" section as a 3-4 step horizontal flow with icons,
-
-   using bento-grid style cards.
-
-4. "Trust & Verification" section highlighting the Skill Verification
-
-   Program and Verified Professional Badge — use a badge/shield visual
-
-   motif with gold accent color.
-
-5. Employer dashboard (basic): post a job (fields: date, time, location,
-
-   number of workers, wage, facilities), view applicants, job status
-
-   cards in a bento grid.
-
-6. Worker dashboard (basic): browse job listings as cards (location,
-
-   wage, date/time, employer rating), one-tap "Book This Job" button,
-
-   profile section showing Verified Badge status.
-
-7. Footer with simple links, social icons, and brand colors.
-
-INTERACTIONS:
-
-- Buttons: scale up slightly (1.03x) + orange glow shadow on hover,
-
-  smooth 200ms transitions
-
-- Job cards: subtle lift + shadow on hover
-
-- Badge elements: small bounce-in animation on load
-
-- Use skeleton loading states, not spinners, for any data-loading areas
-
-- Smooth page transitions, no jarring jumps
-
-NAVIGATION: Keep it extremely simple — max 4-5 nav items. Every action
-
-should be reachable in 2 clicks max from home. Avoid clutter; this app
-
-will be used by people with varying smartphone literacy, so clarity
-
-beats cleverness.
-
-Do not use generic default Tailwind/shadcn styling untouched —
-
-customize colors, shadows, and spacing to match the brand system above
-
-so it doesn't look like a template.
-
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://swift-team-up.lovable.app
+---
 
 ## Build with Lovable
 

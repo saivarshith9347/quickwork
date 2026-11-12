@@ -617,23 +617,15 @@ function PositionSelectionPage() {
     };
   }, [jobId]);
 
-  // Simulation hook for multi-tab testing
+  // ── Release position lock when leaving page ────────────────────────────────
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    (window as any).__simulateWorkerBooking = (targetPositionNumber = 3, catId = "cat-1") => {
-      broadcastPositionUpdate(jobId, {
-        id: `p${targetPositionNumber}`,
-        job_id: jobId,
-        status: "BOOKED",
-        position_number: targetPositionNumber,
-        category_id: catId,
-        worker_id: "worker_other_tab",
-      });
-    };
     return () => {
-      delete (window as any).__simulateWorkerBooking;
+      // Cleanup on unmount - release any held position
+      if (selection?.positionId && currentWorkerId) {
+        void rpcReleasePosition(selection.positionId);
+      }
     };
-  }, [jobId]);
+  }, [selection, currentWorkerId]);
 
   // ── Scroll active tab into view ────────────────────────────────────────────
   useEffect(() => {
@@ -651,11 +643,16 @@ function PositionSelectionPage() {
         });
         return;
       }
-      if (!isLoggedIn && !isMock) {
+      if (!isLoggedIn) {
         openLoginModal({ type: "book-shift", payload: jobId });
         return;
       }
-      const effectiveWorkerId = currentWorkerId ?? "worker_demo";
+      if (!currentWorkerId) {
+        toast.error("Not logged in", {
+          description: "Please log in to select a position.",
+        });
+        return;
+      }
       if (!stats) return;
 
       const activeCategory = stats.categories.find((c) => c.category_id === activeCategoryId);
@@ -667,7 +664,7 @@ function PositionSelectionPage() {
       // Deselect same position
       if (selection?.positionId === positionId) {
         setReleasing(true);
-        if (!isMock) await rpcReleasePosition(positionId);
+        await rpcReleasePosition(positionId);
         broadcastPositionUpdate(jobId, {
           id: positionId,
           job_id: jobId,
@@ -683,9 +680,7 @@ function PositionSelectionPage() {
 
       // Release previous lock before acquiring new one
       if (selection) {
-        if (!isMock) {
-          await rpcReleasePosition(selection.positionId);
-        }
+        await rpcReleasePosition(selection.positionId);
         broadcastPositionUpdate(jobId, {
           id: selection.positionId,
           job_id: jobId,
@@ -698,31 +693,20 @@ function PositionSelectionPage() {
       setSelection(null);
 
       setReserving(true);
-      let lockExpiresAt: string | null = null;
 
-      if (!isMock) {
-        const result = await rpcReservePosition(positionId);
-        if (!result.ok) {
-          setReserving(false);
-          const friendlyErrors: Record<string, string> = {
-            position_not_found: "This position no longer exists.",
-            position_locked_by_another_worker: "This position was just reserved by another worker.",
-            position_already_booked: "This position is already booked.",
-            job_not_accepting: "This job is no longer accepting bookings.",
-            worker_already_has_active_application:
-              "You already have an active application for this job.",
-          };
-          toast.error("Cannot select position", {
-            description: friendlyErrors[result.error ?? ""] ?? result.error ?? "Please try again.",
-          });
-          const refreshed = await getJobPositionStats(jobId);
-          if (refreshed.ok) setStats(refreshed.data);
-          return;
-        }
-        lockExpiresAt = result.lockExpiresAt;
-      } else {
-        lockExpiresAt = new Date(Date.now() + 120_000).toISOString();
+      const result = await rpcReservePosition(positionId);
+      if (!result.ok) {
+        setReserving(false);
+        const errorMessage = RESERVE_POSITION_ERRORS[result.error ?? ""] ?? result.error;
+        toast.error("Cannot select position", {
+          description: errorMessage || "Please try again.",
+        });
+        const refreshed = await getJobPositionStats(jobId);
+        if (refreshed.ok) setStats(refreshed.data);
+        return;
       }
+
+      const lockExpiresAt = result.lockExpiresAt;
 
       setSelection({
         categoryId: activeCategoryId!,
@@ -739,32 +723,15 @@ function PositionSelectionPage() {
         status: "PENDING",
         position_number: clickedPosition.position_number,
         category_id: activeCategoryId!,
-        worker_id: effectiveWorkerId,
+        worker_id: currentWorkerId,
         lock_expires_at: lockExpiresAt,
       });
-
-      // Optimistic update in mock mode
-      if (isMock) {
-        setStats((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            categories: prev.categories.map((cat) => ({
-              ...cat,
-              positions: cat.positions.map((p) =>
-                p.id === positionId ? { ...p, status: "PENDING" as PositionStatus } : p,
-              ),
-            })),
-          };
-        });
-      }
 
       setReserving(false);
       setLostPosition(null);
     },
     [
       isLoggedIn,
-      isMock,
       isRapidCutoff,
       openLoginModal,
       jobId,
@@ -916,13 +883,6 @@ function PositionSelectionPage() {
               </div>
             </div>
           </div>
-
-          {isMock && (
-            <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/8 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
-              <Info className="size-3.5" aria-hidden="true" />
-              Preview mode — connect Supabase to enable live bookings
-            </div>
-          )}
         </div>
       </div>
 
@@ -1156,10 +1116,10 @@ function PositionSelectionPage() {
                   type="button"
                   disabled={releasing}
                   onClick={async () => {
-                    if (!selection) return;
+                    if (!selection || !currentWorkerId) return;
                     const prevSel = selection;
                     setReleasing(true);
-                    if (!isMock && currentWorkerId) await rpcReleasePosition(prevSel.positionId);
+                    await rpcReleasePosition(prevSel.positionId);
                     broadcastPositionUpdate(jobId, {
                       id: prevSel.positionId,
                       job_id: jobId,

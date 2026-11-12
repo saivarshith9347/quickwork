@@ -3,32 +3,20 @@
  * Displays application details with actions for both workers and employers
  */
 
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Loader2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ApplicationStatusBadge } from "@/components/application-status-badge";
-import {
-  useApplications,
-  canConfirmApplication,
-  canRejectApplication,
-  canWaitlistApplication,
-  type Application as ModelApplication,
-} from "@/lib/application-model";
-import type { Application as ServiceApplication } from "@/lib/services/application-service";
-import { useApplicationJobSync } from "@/lib/application-job-sync";
-
-export type CompatibleApplication = (ServiceApplication | ModelApplication) & {
-  posterNote?: string | null | undefined;
-  employerNote?: string | null | undefined;
-};
+import { ApplicationService, type Application } from "@/lib/services/application-service";
 
 interface ApplicationCardProps {
-  application: CompatibleApplication;
+  application: Application;
   viewMode: "worker" | "employer";
   showActions?: boolean;
-  onStatusChange?: (jobId: string, confirmedCount: number) => void;
+  onStatusChange?: () => void;
 }
 
 export function ApplicationCard({
@@ -37,49 +25,40 @@ export function ApplicationCard({
   showActions = true,
   onStatusChange,
 }: ApplicationCardProps) {
-  const { confirmWithSync, rejectWithSync, waitlistWithSync } = useApplicationJobSync();
+  const [acting, setActing] = useState(false);
 
-  const handleConfirm = () => {
-    const result = confirmWithSync(application.id, "Welcome! Looking forward to working with you.");
+  const handleAccept = async () => {
+    setActing(true);
+    const result = await ApplicationService.employerUpdateApplication(application.id, "ACCEPTED");
     if (result.success) {
-      toast.success("Application confirmed!");
-      if (result.jobId && result.confirmedCount !== undefined) {
-        onStatusChange?.(result.jobId, result.confirmedCount);
-      }
+      toast.success("Application accepted!");
+      onStatusChange?.();
     } else {
-      toast.error("Failed to confirm application");
+      toast.error("Failed to accept application", {
+        description: result.error || "Unable to update application status. Please try again.",
+      });
     }
+    setActing(false);
   };
 
-  const handleReject = () => {
-    const result = rejectWithSync(application.id, "Position filled. Thank you for your interest.");
+  const handleReject = async () => {
+    setActing(true);
+    const result = await ApplicationService.employerUpdateApplication(application.id, "REJECTED");
     if (result.success) {
       toast.success("Application rejected");
-      if (result.jobId && result.confirmedCount !== undefined) {
-        onStatusChange?.(result.jobId, result.confirmedCount);
-      }
+      onStatusChange?.();
     } else {
-      toast.error("Failed to reject application");
+      toast.error("Failed to reject application", {
+        description: result.error || "Unable to update application status. Please try again.",
+      });
     }
-  };
-
-  const handleWaitlist = () => {
-    const result = waitlistWithSync(
-      application.id,
-      "Great profile! We may contact you if a spot opens.",
-    );
-    if (result.success) {
-      toast.success("Moved to waitlist");
-      onStatusChange?.(application.jobId, 0); // No position change for waitlist
-    } else {
-      toast.error("Failed to waitlist application");
-    }
+    setActing(false);
   };
 
   const showEmployerActions =
     viewMode === "employer" &&
     showActions &&
-    (application.status === "Pending" || application.status === "Waitlisted");
+    application.status === "PENDING";
 
   return (
     <div className="rounded-lg border bg-card p-4 transition-all hover:shadow-md">
@@ -89,7 +68,9 @@ export function ApplicationCard({
           <div className="flex items-center gap-3">
             <div className="flex-1">
               {viewMode === "employer" ? (
-                <p className="font-medium">Worker ID: {application.workerId}</p>
+                <p className="font-medium">
+                  {application.worker?.name || `Worker ID: ${application.workerId}`}
+                </p>
               ) : (
                 <p className="font-medium">Job ID: {application.jobId}</p>
               )}
@@ -109,14 +90,9 @@ export function ApplicationCard({
                 minute: "2-digit",
               })}
             </p>
-            {application.confirmedAt && (
+            {application.status === "ACCEPTED" && (
               <p className="text-success">
-                Confirmed:{" "}
-                {new Date(application.confirmedAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
+                Accepted
               </p>
             )}
           </div>
@@ -129,13 +105,13 @@ export function ApplicationCard({
             </div>
           )}
 
-          {/* Employer / Poster Note */}
-          {(application.employerNote || application.posterNote) && (
+          {/* Employer Note */}
+          {application.employerNote && (
             <div className="rounded border border-primary/20 bg-primary/5 p-3">
               <p className="text-xs font-medium text-primary">
                 {viewMode === "worker" ? "Employer note:" : "Your note:"}
               </p>
-              <p className="mt-1 text-sm">{application.employerNote || application.posterNote}</p>
+              <p className="mt-1 text-sm">{application.employerNote}</p>
             </div>
           )}
         </div>
@@ -144,44 +120,36 @@ export function ApplicationCard({
       {/* Actions (Employer only) */}
       {showEmployerActions && (
         <div className="mt-4 flex flex-wrap gap-2">
-          {canConfirmApplication(application.status as any) && (
-            <Button onClick={handleConfirm} size="sm" className="flex-1 sm:flex-initial">
+          <Button 
+            onClick={handleAccept} 
+            size="sm" 
+            className="flex-1 sm:flex-initial"
+            disabled={acting}
+          >
+            {acting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              Confirm
-            </Button>
-          )}
+            )}
+            Accept
+          </Button>
 
-          {canWaitlistApplication(application.status as any) && (
-            <Button
-              onClick={handleWaitlist}
-              size="sm"
-              variant="outline"
-              className="flex-1 sm:flex-initial"
-            >
-              <Clock className="mr-2 h-4 w-4" />
-              Waitlist
-            </Button>
-          )}
-
-          {canRejectApplication(application.status as any) && (
-            <Button
-              onClick={handleReject}
-              size="sm"
-              variant="ghost"
-              className="flex-1 sm:flex-initial"
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              Reject
-            </Button>
-          )}
+          <Button
+            onClick={handleReject}
+            size="sm"
+            variant="ghost"
+            className="flex-1 sm:flex-initial"
+            disabled={acting}
+          >
+            <XCircle className="mr-2 h-4 w-4" />
+            Reject
+          </Button>
         </div>
       )}
 
-      {/* View Booking Button (Worker view, Confirmed / Booked / Accepted status) */}
+      {/* View Booking Button (Worker view, Accepted / Booked status) */}
       {viewMode === "worker" &&
-        (application.status === "Confirmed" ||
-          application.status === "BOOKED" ||
-          application.status === "ACCEPTED") && (
+        (application.status === "ACCEPTED" || application.status === "BOOKED") && (
           <div className="mt-4">
             <Button variant="hero" size="sm" asChild className="w-full">
               <Link

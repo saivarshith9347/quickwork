@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
+  Briefcase,
   CalendarDays,
   ChevronRight,
   MapPin,
@@ -528,15 +529,14 @@ function WorkPage() {
   const [activeFilters, setActiveFilters] = useState<FilterId[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<JobCategoryValue | "All">("All");
 
-  // Build query params for React Query - always fetch jobs that are Open or PartiallyFilled, job_date >= today
+  // Build query params for React Query - default: status Open or PartiallyFilled, job_date >= today
   const queryParams = useMemo(() => {
     const params: {
-      status?: "Open" | "PartiallyFilled";
       category?: JobCategoryValue;
       isRapidJob?: boolean;
       limit?: number;
     } = {
-      limit: 100, // Fetch more initially, we'll filter client-side
+      limit: 100, // Fetch more initially
     };
 
     if (selectedCategory !== "All") {
@@ -802,20 +802,26 @@ function WorkPage() {
         ) : error ? (
           <ErrorState
             title="Failed to load jobs"
-            message={error instanceof Error ? error.message : "An error occurred"}
-            actionLabel="Try again"
-            onAction={() => refetch()}
+            description={error instanceof Error ? error.message : "An error occurred"}
+            onRetry={() => refetch()}
           />
         ) : jobs.length === 0 ? (
           <EmptyState
+            icon={filtersActive ? Search : Briefcase}
             title={filtersActive ? "No jobs match your filters" : "No jobs available"}
-            message={
+            description={
               filtersActive
                 ? "Try adjusting your search or filters to see more results"
                 : "Check back soon for new opportunities"
             }
-            actionLabel={filtersActive ? "Clear filters" : undefined}
-            onAction={filtersActive ? clearAll : undefined}
+            action={
+              filtersActive
+                ? {
+                    label: "Clear filters",
+                    onClick: clearAll,
+                  }
+                : undefined
+            }
           />
         ) : (
           <>

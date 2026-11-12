@@ -334,24 +334,3 @@ export function useUpdateApplicationStatus() {
     },
   });
 }
-
-// ─── Release Expired Locks ────────────────────────────────────────────────────
-
-export function useReleaseExpiredLocks() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      const result = await ApplicationService.releaseExpiredLocks();
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      return result.releasedCount;
-    },
-    onSuccess: () => {
-      // Invalidate everything - positions may have been released
-      queryClient.invalidateQueries({ queryKey: applicationKeys.all });
-      queryClient.invalidateQueries({ queryKey: jobKeys.all });
-    },
-  });
-}

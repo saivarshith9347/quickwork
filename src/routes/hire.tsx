@@ -195,7 +195,7 @@ function HirePage() {
               : "Log in to post shifts and manage applicants."}
           </p>
         </div>
-        {isLoggedIn && <VerifiedBadge label="Verified" tone="success" />}
+        {isLoggedIn && user?.is_verified && <VerifiedBadge label="Verified" tone="success" />}
       </div>
 
       {/* Gate banner for logged-out visitors */}
@@ -450,7 +450,7 @@ function HirePage() {
                     job.positionsRequired,
                     job.positionsConfirmed,
                   );
-                  const jobStats = getJobApplicationStats(job.id);
+                  const jobStats = applications[job.id] ? calculateApplicationStats(applications[job.id]!) : null;
 
                   return (
                     <article
@@ -509,18 +509,18 @@ function HirePage() {
                         {job.endTime}
                       </p>
                       <p className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="size-4" /> {job.area}
+                        <MapPin className="size-4" /> {getAreaDisplay(job)}
                       </p>
                       <p className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="size-4" /> {formatDuration(job.duration)} ·{" "}
+                        <Clock className="size-4" /> {formatDuration(job.duration ?? 0)} ·{" "}
                         {JOB_TYPE_LABELS[job.jobType]}
                       </p>
                       <p className="mt-5 flex items-center gap-2 font-display text-xl font-bold text-primary">
-                        <Wallet className="size-5" /> {job.wage}
+                        <Wallet className="size-5" /> ₹{job.wage.toLocaleString("en-IN")}
                         <span className="text-sm font-medium text-muted-foreground">/ worker</span>
                       </p>
                       <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-                        Posted {job.postedAt}
+                        Posted {formatJobDate(job.createdAt)}
                       </p>
 
                       {/* Action buttons */}

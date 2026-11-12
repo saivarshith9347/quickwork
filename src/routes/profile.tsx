@@ -41,75 +41,9 @@ export const Route = createFileRoute("/profile")({
 
 type VerificationState = "locked" | "in-progress" | "earned";
 
-const jobs = [
-  {
-    id: "j1",
-    role: "Banquet server",
-    employer: "Grand Palm Banquets",
-    date: "12 Aug 2026",
-    wage: "₹1,200",
-    rating: 5,
-    feedback: "Punctual, professional and great with guests.",
-    status: "Completed",
-  },
-  {
-    id: "j2",
-    role: "Event steward",
-    employer: "Blue Orchid Events",
-    date: "08 Aug 2026",
-    wage: "₹1,400",
-    rating: 5,
-    feedback: "Excellent teamwork during the rush.",
-    status: "Completed",
-  },
-  {
-    id: "j3",
-    role: "Kitchen helper",
-    employer: "Saffron Caterers",
-    date: "02 Aug 2026",
-    wage: "₹950",
-    rating: 4,
-    feedback: "Hard worker. Would recommend.",
-    status: "Completed",
-  },
-  {
-    id: "j4",
-    role: "Dishwashing crew",
-    employer: "Coastal Kitchen Co.",
-    date: "25 Jul 2026",
-    wage: "₹900",
-    rating: 5,
-    feedback: "Fast, thorough and polite.",
-    status: "Completed",
-  },
-];
+const jobs: never[] = [];
 
-const ratings = [
-  {
-    id: "r1",
-    employer: "Grand Palm Banquets",
-    date: "12 Aug 2026",
-    score: 5,
-    text: "Rahul arrived 15 minutes early, was well-groomed and handled the guest flow smoothly. Will rehire.",
-    tags: ["Punctual", "Professional"],
-  },
-  {
-    id: "r2",
-    employer: "Blue Orchid Events",
-    date: "08 Aug 2026",
-    score: 5,
-    text: "Top-tier steward. Calm under pressure and very proactive.",
-    tags: ["Team player", "Proactive"],
-  },
-  {
-    id: "r3",
-    employer: "Saffron Caterers",
-    date: "02 Aug 2026",
-    score: 4,
-    text: "Good work ethic. Could be slightly faster during peak prep.",
-    tags: ["Hard worker"],
-  },
-];
+const ratings: never[] = [];
 
 function VerificationBadge({ state }: { state: VerificationState }) {
   if (state === "earned") {
@@ -319,114 +253,39 @@ function ProfilePage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="lg:col-span-3">
-          <div className="rounded-3xl border border-border bg-card p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lift">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-accent text-primary">
-              <CalendarCheck className="size-6" />
-            </div>
-            <p className="mt-5 font-display text-4xl font-bold">128</p>
-            <p className="mt-1 text-sm text-muted-foreground">Shifts completed</p>
-          </div>
-        </div>
-        <div className="lg:col-span-3">
-          <div className="rounded-3xl border border-border bg-card p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lift">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-accent text-primary">
-              <Star className="size-6 fill-gold text-gold" />
-            </div>
-            <p className="mt-5 font-display text-4xl font-bold">4.9</p>
-            <p className="mt-1 text-sm text-muted-foreground">Average rating</p>
-          </div>
-        </div>
-        <div className="lg:col-span-3">
-          <div className="rounded-3xl border border-border bg-card p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lift">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-accent text-primary">
-              <Clock className="size-6" />
-            </div>
-            <p className="mt-5 font-display text-4xl font-bold text-success">98%</p>
-            <p className="mt-1 text-sm text-muted-foreground">Punctuality</p>
-          </div>
-        </div>
-        <div className="lg:col-span-3">
-          <div className="rounded-3xl border border-border bg-card p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lift">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-accent text-primary">
-              <ThumbsUp className="size-6" />
-            </div>
-            <p className="mt-5 font-display text-4xl font-bold">94%</p>
-            <p className="mt-1 text-sm text-muted-foreground">Would rehire</p>
+        {/* Stats - hidden until real data available */}
+        <div className="lg:col-span-12">
+          <div className="rounded-3xl border border-border bg-card p-6">
+            <p className="text-sm text-muted-foreground">
+              Your profile statistics will appear here once you complete shifts and receive ratings.
+            </p>
           </div>
         </div>
 
-        {/* Job history */}
+        {/* Job history - hidden until real data available */}
         <div className="lg:col-span-7">
           <div className="rounded-3xl border border-border bg-card p-7">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Job history</h2>
-              <Button variant="ghost" size="sm">
-                View all
-              </Button>
             </div>
-            <div className="mt-6 space-y-4">
-              {jobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{job.role}</h3>
-                      <span className="rounded-lg bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
-                        {job.status}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{job.employer}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">{job.date}</p>
-                  </div>
-                  <div className="flex flex-col items-start gap-1 sm:items-end">
-                    <p className="font-display text-xl font-bold text-primary">{job.wage}</p>
-                    <StarRating score={job.rating} />
-                  </div>
-                </div>
-              ))}
+            <div className="mt-6">
+              <p className="text-sm text-muted-foreground">
+                Your completed jobs will appear here.
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Ratings */}
+        {/* Ratings - hidden until ratings table exists */}
         <div className="lg:col-span-5">
           <div className="rounded-3xl border border-border bg-card p-7">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Employer ratings</h2>
-              <div className="flex items-center gap-1.5 text-sm font-semibold">
-                <Star className="size-4 fill-gold text-gold" /> 4.9
-              </div>
             </div>
-            <div className="mt-6 space-y-5">
-              {ratings.map((rating) => (
-                <div
-                  key={rating.id}
-                  className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{rating.employer}</p>
-                      <p className="text-xs text-muted-foreground">{rating.date}</p>
-                    </div>
-                    <StarRating score={rating.score} />
-                  </div>
-                  <p className="mt-3 text-sm text-muted-foreground">"{rating.text}"</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {rating.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="mt-6">
+              <p className="text-sm text-muted-foreground">
+                Employer ratings will appear here once the ratings system is implemented.
+              </p>
             </div>
           </div>
         </div>

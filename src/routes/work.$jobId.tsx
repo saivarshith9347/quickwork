@@ -1132,10 +1132,16 @@ function CtaButton({
   }
 
   if (isJobClosed) {
+    const closedReason = job.status === "Cancelled" 
+      ? "Job Cancelled" 
+      : isExpired 
+        ? "Rapid Job Expired" 
+        : "Applications Closed";
+    
     return (
       <Button variant="outline" size="lg" disabled className={className}>
         <Clock className="size-4" aria-hidden="true" />
-        {job.status === "Cancelled" ? "Job Cancelled" : "Applications Closed"}
+        {closedReason}
       </Button>
     );
   }

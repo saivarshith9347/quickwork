@@ -52,6 +52,7 @@ import {
 } from "@/lib/job-types";
 import { useAuth } from "@/lib/auth-context";
 import { useCreateJob } from "@/lib/hooks/use-jobs";
+import { getSupabase } from "@/lib/supabase";
 import { useNavigate } from "@tanstack/react-router";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -2051,7 +2052,7 @@ function PostJobContent() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="reporting-contact-name" className="font-semibold">
-                      Contact name <span className="text-destructive">*</span>
+                      Reporting contact name <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="reporting-contact-name"
@@ -2063,7 +2064,7 @@ function PostJobContent() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="reporting-contact-phone" className="font-semibold">
-                      Contact phone <span className="text-destructive">*</span>
+                      Reporting contact phone <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="reporting-contact-phone"

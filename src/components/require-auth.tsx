@@ -22,23 +22,23 @@ interface RequireAuthProps {
 }
 
 export function RequireAuth({ children }: RequireAuthProps) {
-  const { user, isLoading, profileComplete, openLoginModal } = useAuth();
+  const { user, loading, openLoginModal } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     // If logged out, open login modal with current path as pending action
-    if (!isLoading && !user) {
+    if (!loading && !user) {
       openLoginModal({ action: "resume", path: window.location.pathname });
     }
 
     // If profile incomplete, redirect to complete-profile
-    if (!isLoading && user && !profileComplete) {
+    if (!loading && user && !user.profileComplete) {
       void navigate({ to: "/complete-profile" });
     }
-  }, [user, isLoading, profileComplete, openLoginModal, navigate]);
+  }, [user, loading, openLoginModal, navigate]);
 
   // Loading state: show skeleton
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="animate-pulse space-y-6">

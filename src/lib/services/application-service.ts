@@ -49,11 +49,16 @@ export interface Application {
   employerNote: string | null;
   createdAt: string;
   updatedAt: string;
+  // Joined fields (optional, populated when needed)
+  worker?: {
+    name: string;
+    avatar_url: string | null;
+  } | null;
 }
 
 // ─── Transform Functions ──────────────────────────────────────────────────────
 
-function dbApplicationToApplication(dbApp: DbApplication): Application {
+function dbApplicationToApplication(dbApp: any): Application {
   return {
     id: dbApp.id,
     jobId: dbApp.job_id,
@@ -68,6 +73,7 @@ function dbApplicationToApplication(dbApp: DbApplication): Application {
     employerNote: dbApp.employer_note,
     createdAt: dbApp.created_at,
     updatedAt: dbApp.updated_at,
+    worker: dbApp.worker,
   };
 }
 
@@ -341,6 +347,7 @@ export class ApplicationService {
 
   /**
    * Get all applications for a job (employer view).
+   * Includes worker profile information.
    */
   static async getJobApplications(params: {
     jobId: string;
@@ -359,7 +366,16 @@ export class ApplicationService {
     try {
       let query = supabase
         .from("applications")
-        .select("*", { count: "exact" })
+        .select(
+          `
+          *,
+          worker:public_profiles!applications_worker_id_fkey (
+            name,
+            avatar_url
+          )
+        `,
+          { count: "exact" },
+        )
         .eq("job_id", params.jobId);
 
       if (params.status) {
@@ -472,39 +488,12 @@ export class ApplicationService {
   }
 
   /**
-   * Release expired position locks.
-   * This should be called by a scheduled job periodically.
+   * Employer updates an application status (accept/reject/complete).
+   * Uses the employer_update_application RPC for proper authorization.
    */
-  static async releaseExpiredLocks(): Promise<
-    { success: true; releasedCount: number } | { success: false; error: string }
-  > {
-    const supabase = getSupabase();
-    if (!supabase) {
-      return { success: false, error: "Supabase client not initialized" };
-    }
-
-    try {
-      const { data, error } = await supabase.rpc("cleanup_expired_locks");
-
-      if (error) {
-        console.error("Failed to release expired locks:", error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, releasedCount: typeof data === "number" ? data : 0 };
-    } catch (error) {
-      console.error("Exception releasing expired locks:", error);
-      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
-    }
-  }
-
-  /**
-   * Update application status directly (admin operation).
-   * Not recommended for normal flow - use reservePosition, confirmBooking, cancelApplication instead.
-   */
-  static async updateApplicationStatus(
+  static async employerUpdateApplication(
     applicationId: string,
-    status: ApplicationStatus,
+    newStatus: "ACCEPTED" | "REJECTED" | "COMPLETED",
     note?: string,
   ): Promise<{ success: true } | { success: false; error: string }> {
     const supabase = getSupabase();
@@ -513,26 +502,14 @@ export class ApplicationService {
     }
 
     try {
-      const updates: DbApplicationUpdate = {
-        status,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (status === "BOOKED" || status === "ACCEPTED") {
-        updates.confirmed_at = new Date().toISOString();
-      }
-
-      if (status === "CANCELLED") {
-        updates.cancelled_at = new Date().toISOString();
-      }
-
-      if (note) {
-        updates.employer_note = note;
-      }
-
-      const { error } = await supabase.from("applications").update(updates).eq("id", applicationId);
+      const { data, error } = await supabase.rpc("employer_update_application", {
+        application_id: applicationId,
+        new_status: newStatus,
+        employer_note_text: note || null,
+      });
 
       if (error) {
+        console.error("Failed to update application:", error);
         return { success: false, error: error.message };
       }
 

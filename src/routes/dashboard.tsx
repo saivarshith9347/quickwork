@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ChevronRight,
   Clock,
+  Loader2,
   MapPin,
   Plus,
   Search,
@@ -14,11 +15,13 @@ import {
   Wallet,
 } from "lucide-react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { RequireAuth } from "@/components/require-auth";
 import { useAuth } from "@/lib/auth-context";
+import { getSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -41,54 +44,6 @@ function DashboardPage() {
   );
 }
 
-// ─── Mock activity data ───────────────────────────────────────────────────────
-
-const recentShifts = [
-  {
-    id: "1",
-    role: "Banquet server",
-    employer: "Grand Palm Banquets",
-    date: "Tue, 18 Aug · 5 PM",
-    area: "Andheri East",
-    wage: "₹1,200",
-    status: "Upcoming",
-    statusColor: "text-primary bg-primary/10",
-  },
-  {
-    id: "2",
-    role: "Kitchen helper",
-    employer: "Saffron Caterers",
-    date: "Wed, 19 Aug · 9 AM",
-    area: "Powai",
-    wage: "₹950",
-    status: "Confirmed",
-    statusColor: "text-emerald-600 bg-emerald-500/10",
-  },
-];
-
-const postedJobs = [
-  {
-    id: "1",
-    role: "Banquet servers",
-    date: "Fri, 14 Aug · 5 PM",
-    area: "Andheri East",
-    filled: 6,
-    total: 8,
-    status: "Filling",
-    statusColor: "text-amber-600 bg-amber-500/10",
-  },
-  {
-    id: "2",
-    role: "Kitchen helpers",
-    date: "Sat, 15 Aug · 9 AM",
-    area: "Powai",
-    filled: 4,
-    total: 4,
-    status: "Confirmed",
-    statusColor: "text-emerald-600 bg-emerald-500/10",
-  },
-];
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function DashboardContent() {
@@ -97,6 +52,60 @@ function DashboardContent() {
   if (!user) return null;
 
   const firstName = user.name?.split(" ")[0] ?? "there";
+  
+  // Query worker stats: shifts completed
+  const { data: completedShifts = 0 } = useQuery({
+    queryKey: ["worker-shifts-completed", user.id],
+    queryFn: async () => {
+      const supabase = getSupabase();
+      const { count, error } = await supabase
+        .from("applications")
+        .select("*", { count: "exact", head: true })
+        .eq("worker_id", user.id)
+        .eq("status", "COMPLETED");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  // Query employer stats: jobs posted
+  const { data: jobsPosted = 0 } = useQuery({
+    queryKey: ["employer-jobs-posted", user.id],
+    queryFn: async () => {
+      const supabase = getSupabase();
+      const { count, error } = await supabase
+        .from("jobs")
+        .select("*", { count: "exact", head: true })
+        .eq("employer_id", user.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  // Query employer stats: workers hired (positions with BOOKED status)
+  const { data: workersHired = 0 } = useQuery({
+    queryKey: ["employer-workers-hired", user.id],
+    queryFn: async () => {
+      const supabase = getSupabase();
+      const { data: jobs, error: jobsError } = await supabase
+        .from("jobs")
+        .select("id")
+        .eq("employer_id", user.id);
+      
+      if (jobsError) throw jobsError;
+      if (!jobs || jobs.length === 0) return 0;
+
+      const jobIds = jobs.map((j) => j.id);
+      const { count, error } = await supabase
+        .from("applications")
+        .select("*", { count: "exact", head: true })
+        .in("job_id", jobIds)
+        .eq("status", "BOOKED");
+      
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
@@ -112,7 +121,7 @@ function DashboardContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <VerifiedBadge label="Verified" tone="success" />
+          {user.is_verified && <VerifiedBadge label="Verified" tone="success" />}
         </div>
       </div>
 
@@ -176,67 +185,39 @@ function DashboardContent() {
       </div>
 
       {/* ── Stats strip ── */}
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { icon: CalendarDays, label: "Shifts worked", value: "14" },
-          { icon: Star, label: "Rating", value: "4.9" },
-          { icon: Briefcase, label: "Jobs posted", value: "3" },
-          { icon: Users, label: "Workers hired", value: "22" },
-        ].map(({ icon: Icon, label, value }) => (
-          <div key={label} className="rounded-2xl border border-border bg-surface p-5">
-            <Icon className="size-5 text-primary" />
-            <p className="mt-3 font-display text-2xl font-bold">{value}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
-          </div>
-        ))}
+      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <CalendarDays className="size-5 text-primary" />
+          <p className="mt-3 font-display text-2xl font-bold">{completedShifts}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Shifts completed</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <Briefcase className="size-5 text-primary" />
+          <p className="mt-3 font-display text-2xl font-bold">{jobsPosted}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Jobs posted</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <Users className="size-5 text-primary" />
+          <p className="mt-3 font-display text-2xl font-bold">{workersHired}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Workers hired</p>
+        </div>
       </div>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-2">
-        {/* ── Applied / booked shifts ── */}
+        {/* ── Quick links to other pages ── */}
         <section>
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Your booked shifts</h2>
+            <h2 className="text-xl font-semibold">Your applications</h2>
             <Link to="/work" className="text-sm font-semibold text-primary hover:underline">
-              Browse more →
+              Browse shifts →
             </Link>
           </div>
-          <ul className="mt-4 space-y-3">
-            {recentShifts.map((s) => (
-              <li
-                key={s.id}
-                className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift"
-              >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Clock className="size-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold truncate">{s.role}</p>
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${s.statusColor}`}
-                    >
-                      {s.status}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-sm text-muted-foreground">{s.employer}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <CalendarDays className="size-3.5" /> {s.date}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="size-3.5" /> {s.area}
-                    </span>
-                    <span className="flex items-center gap-1 font-semibold text-foreground">
-                      <Wallet className="size-3.5" /> {s.wage}
-                    </span>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-2 text-sm text-muted-foreground">
+            View and manage your job applications on the Work page.
+          </p>
         </section>
 
-        {/* ── Posted jobs ── */}
+        {/* ── Posted jobs link ── */}
         <section>
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Your posted jobs</h2>
@@ -244,45 +225,9 @@ function DashboardContent() {
               View all jobs →
             </Link>
           </div>
-          <ul className="mt-4 space-y-3">
-            {postedJobs.map((j) => (
-              <li
-                key={j.id}
-                className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift"
-              >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Briefcase className="size-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold truncate">{j.role}</p>
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${j.statusColor}`}
-                    >
-                      {j.status}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <CalendarDays className="size-3.5" /> {j.date}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="size-3.5" /> {j.area}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="size-3.5" /> {j.filled}/{j.total} booked
-                    </span>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          <Link to="/my-jobs">
-            <Button variant="outline" size="sm" className="mt-4 w-full gap-2">
-              <Briefcase className="size-4" /> View All My Jobs
-            </Button>
-          </Link>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Manage your job listings and review applicants on the My Jobs page.
+          </p>
         </section>
       </div>
     </div>

@@ -13,20 +13,19 @@ import {
   Loader2,
   MapPin,
   Share2,
-  Star,
   Timer,
   Wallet,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { VerifiedBadge } from "@/components/verified-badge";
 import { useAuth } from "@/lib/auth-context";
 import { useApplication } from "@/lib/hooks/use-applications";
 import { useJob } from "@/lib/hooks/use-jobs";
-import { ApplicationService } from "@/lib/services/application-service";
 import { formatLocation } from "@/lib/job-types";
+import { getSupabase } from "@/lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/checkout")({
   validateSearch: (
@@ -54,26 +53,17 @@ export const Route = createFileRoute("/checkout")({
 
 type PaymentStatus = "pending" | "manual_settlement" | "gateway_not_configured";
 
-// ─── Mock shift data ──────────────────────────────────────────────────────────
-
-const shift = {
-  role: "Banquet server",
-  employer: "Grand Palm Banquets",
-  venue: "Grand Palm Banquet Hall",
-  area: "Andheri East",
-  date: "Mon, 17 Aug 2026",
-  checkIn: "5:03 PM",
-  checkOut: "10:58 PM",
-  hoursWorked: 5.92,
-  wagePerShift: 1200,
-  upiId: "quickwork@okaxis",
-  txnRef: "QW26081700042",
-  workerName: "Rahul Mehta",
-  workerUpi: "rahulmehta@upi",
-  rating: 5,
-};
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function calculateHours(startTime: string, endTime: string): number {
+  const [startH, startM] = startTime.split(":").map(Number);
+  const [endH, endM] = endTime.split(":").map(Number);
+  
+  const startMinutes = (startH ?? 0) * 60 + (startM ?? 0);
+  const endMinutes = (endH ?? 0) * 60 + (endM ?? 0);
+  
+  return (endMinutes - startMinutes) / 60;
+}
 
 function fmt(hrs: number) {
   const h = Math.floor(hrs);
@@ -109,33 +99,16 @@ function SummaryRow({
   );
 }
 
-function StarRating({ score }: { score: number }) {
-  return (
-    <div className="flex items-center gap-0.5" role="img" aria-label={`${score} out of 5 stars`}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          className={`size-5 ${i < score ? "fill-gold text-gold" : "text-muted-foreground/30"}`}
-        />
-      ))}
-    </div>
-  );
-}
-
 // ─── Payment status card ──────────────────────────────────────────────────────
 
 function PaymentCard({
   status,
   wage,
-  workerUpi,
   txnRef,
-  upiId,
 }: {
   status: PaymentStatus;
   wage: number;
-  workerUpi: string;
   txnRef: string;
-  upiId: string;
 }) {
   const isSettlementPending = status === "manual_settlement" || status === "gateway_not_configured";
 
@@ -193,25 +166,18 @@ function PaymentCard({
           <div className="flex items-center gap-2.5 text-sm">
             <CheckCircle2 className="size-4 text-primary shrink-0" />
             <span className="text-muted-foreground">
-              Designated account: <span className="font-semibold text-foreground">{workerUpi}</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-2.5 text-sm">
-            <CheckCircle2 className="size-4 text-primary shrink-0" />
-            <span className="text-muted-foreground">
               Settlement reference:{" "}
               <span className="font-mono font-semibold text-foreground">{txnRef}</span>
             </span>
           </div>
         </div>
 
-        {/* Notice regarding Gateway */}
+        {/* Notice regarding payment */}
         <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-muted-foreground flex items-start gap-2.5">
           <Info className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <span>
-            Payment Gateway Notice: Direct in-app automated UPI disbursal is currently in
-            sandbox/manual mode. The employer verifies attendance and completes payment settlement
-            directly.
+            Payment is settled directly with the employer. The employer verifies attendance and
+            completes payment settlement directly.
           </span>
         </div>
       </div>
@@ -224,58 +190,147 @@ function PaymentCard({
 function CheckoutPage() {
   const { applicationId, jobId } = Route.useSearch();
   const { user } = useAuth();
-  const { data: application } = useApplication(applicationId, { enabled: !!applicationId });
+  const { data: application, isLoading: appLoading } = useApplication(applicationId, { enabled: !!applicationId });
   const targetJobId = jobId || application?.jobId;
-  const { data: job } = useJob(targetJobId, { enabled: !!targetJobId });
+  const { data: job, isLoading: jobLoading } = useJob(targetJobId, { enabled: !!targetJobId });
+
+  // Fetch employer name from public_profiles
+  const { data: employerData } = useQuery({
+    queryKey: ["employer", job?.employerId],
+    queryFn: async () => {
+      const supabase = getSupabase();
+      if (!supabase || !job?.employerId) return null;
+
+      const { data, error } = await supabase
+        .from("public_profiles")
+        .select("name")
+        .eq("id", job.employerId)
+        .single();
+
+      if (error || !data) return null;
+      return data.name;
+    },
+    enabled: !!job?.employerId,
+  });
 
   const [phase, setPhase] = useState<"summary" | "payment">("summary");
   const [payStatus, setPayStatus] = useState<PaymentStatus>("pending");
   const [confirmed, setConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  if (appLoading || jobLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!application || !job) {
+    return (
+      <div className="mx-auto max-w-2xl px-5 py-14 text-center lg:px-8">
+        <AlertCircle className="mx-auto size-12 text-destructive" />
+        <h1 className="mt-4 text-2xl font-bold">Application or Job not found</h1>
+        <p className="mt-2 text-muted-foreground">
+          Unable to load checkout details. Please try again.
+        </p>
+        <Button variant="hero" size="lg" className="mt-6" asChild>
+          <Link to="/my-applications">Back to My Applications</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const hoursWorked = calculateHours(job.startTime, job.endTime);
+
   const displayShift = {
-    role: job?.jobTitle ?? shift.role,
-    employer: "QuickWork Verified Employer",
+    role: job.jobTitle,
+    employer: employerData || "Employer",
     venue:
-      typeof job?.location === "object"
+      typeof job.location === "object"
         ? job.location.venueName
-        : job
-          ? formatLocation(job.location, "short")
-          : shift.venue,
+        : formatLocation(job.location, "short"),
     area:
-      typeof job?.location === "object"
+      typeof job.location === "object"
         ? job.location.area
-        : job
-          ? formatLocation(job.location, "short")
-          : shift.area,
-    date: job
-      ? new Date(job.date).toLocaleDateString("en-IN", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
-      : shift.date,
-    checkIn: job?.startTime ?? shift.checkIn,
-    checkOut: job?.endTime ?? shift.checkOut,
-    hoursWorked: shift.hoursWorked,
-    wagePerShift: job?.wage ?? shift.wagePerShift,
-    upiId: "settlement@quickwork",
-    txnRef: applicationId ? `TXN${applicationId.slice(0, 8).toUpperCase()}` : shift.txnRef,
-    workerName: user?.name ?? user?.email ?? shift.workerName,
-    workerUpi: user?.phone ? `${user.phone}@upi` : shift.workerUpi,
-    rating: shift.rating,
+        : formatLocation(job.location, "short"),
+    date: new Date(job.date).toLocaleDateString("en-IN", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }),
+    checkIn: job.startTime,
+    checkOut: job.endTime,
+    hoursWorked,
+    wagePerShift: job.wage,
+    txnRef: applicationId ? `TXN${applicationId.slice(0, 8).toUpperCase()}` : "N/A",
+    workerName: user?.name ?? user?.email ?? "Worker",
   };
 
   async function handleConfirmCheckout() {
-    setIsSubmitting(true);
-    if (applicationId) {
-      await ApplicationService.updateApplicationStatus(applicationId, "COMPLETED");
+    if (!applicationId) {
+      toast.error("Application ID is missing");
+      return;
     }
-    setPhase("payment");
-    setPayStatus("manual_settlement");
-    setIsSubmitting(false);
-    toast.success("Shift completion recorded");
+
+    setIsSubmitting(true);
+    
+    try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        toast.error("Unable to connect to database");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Call complete_my_shift RPC
+      const { data, error } = await supabase.rpc("complete_my_shift", {
+        p_application_id: applicationId,
+      });
+
+      if (error) {
+        console.error("Failed to complete shift:", error);
+        toast.error("Failed to complete shift", {
+          description: error.message || "Unable to mark shift as completed. Please try again.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const result = data as { success?: boolean; error?: string } | null;
+
+      if (!result || !result.success) {
+        const errorMessage = result?.error || "Failed to complete shift";
+        
+        // Map error codes to user-friendly messages
+        const errorMessages: Record<string, string> = {
+          not_authenticated: "Please log in to complete your shift",
+          application_not_found: "Application not found",
+          not_your_application: "You can only complete your own shifts",
+          application_not_accepted: "Only accepted shifts can be completed",
+          job_not_found: "Job not found",
+          shift_not_yet_started: "Shift cannot be completed before the job date",
+        };
+
+        toast.error("Could not complete shift", {
+          description: errorMessages[errorMessage] || errorMessage,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      setPhase("payment");
+      setPayStatus("manual_settlement");
+      toast.success("Shift completion recorded");
+    } catch (error) {
+      console.error("Exception completing shift:", error);
+      toast.error("An error occurred", {
+        description: "Unable to complete shift. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   // ── Phase 1: Job summary + check-out confirmation ──
@@ -289,10 +344,9 @@ function CheckoutPage() {
             <p className="text-sm font-semibold text-primary">Shift complete</p>
             <h1 className="mt-2 text-4xl font-bold font-display sm:text-5xl">Check out</h1>
             <p className="mt-3 text-muted-foreground">
-              Review your shift summary and confirm to release payment.
+              Review your shift summary and confirm to complete.
             </p>
           </div>
-          <VerifiedBadge />
         </div>
 
         {/* Worker + employer card */}
@@ -305,7 +359,6 @@ function CheckoutPage() {
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-xl font-semibold">{displayShift.workerName}</h2>
-                <BadgeCheck className="size-5 text-gold" aria-label="Verified professional" />
               </div>
               <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                 <Briefcase className="size-4" />
@@ -342,32 +395,18 @@ function CheckoutPage() {
           </div>
         </div>
 
-        {/* Rating */}
-        <div className="mt-6 rounded-3xl border border-border bg-surface p-7">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">
-            Employer rating for this shift
-          </h3>
-          <div className="flex items-center gap-4">
-            <StarRating score={displayShift.rating} />
-            <span className="text-sm text-muted-foreground">
-              "Punctual, professional and great with guests."
-            </span>
-          </div>
-        </div>
-
         {/* Attendance confirmation */}
         <div className="mt-6 rounded-3xl border border-border bg-surface p-7">
           <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
-            Attendance confirmation
+            Shift completion
           </h3>
           <p className="mt-2 text-sm text-muted-foreground">
             By confirming, you acknowledge that{" "}
             <span className="font-semibold text-foreground">{displayShift.workerName}</span>{" "}
-            completed this shift and authorise the UPI payment of{" "}
+            completed this shift. Payment is settled directly with the employer:{" "}
             <span className="font-semibold text-primary">
               ₹{displayShift.wagePerShift.toLocaleString("en-IN")}
-            </span>{" "}
-            to <span className="font-mono text-sm font-semibold">{displayShift.workerUpi}</span>.
+            </span>
           </p>
 
           <label className="mt-5 flex cursor-pointer items-start gap-3">
@@ -401,10 +440,10 @@ function CheckoutPage() {
             aria-disabled={!confirmed || isSubmitting}
           >
             {isSubmitting ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-            Confirm check-out &amp; release payment
+            Confirm check-out
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Secured by QuickWork · Direct settlement via {displayShift.upiId}
+            Payment is settled directly with the employer
           </p>
         </div>
       </div>
@@ -429,9 +468,7 @@ function CheckoutPage() {
         <PaymentCard
           status={payStatus}
           wage={displayShift.wagePerShift}
-          workerUpi={displayShift.workerUpi}
           txnRef={displayShift.txnRef}
-          upiId={displayShift.upiId}
         />
       </div>
 

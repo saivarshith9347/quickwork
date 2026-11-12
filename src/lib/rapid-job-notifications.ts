@@ -77,97 +77,6 @@ const NOTIFICATION_CONFIG = {
   MIN_UNFILLED_FOR_REMINDER: 1,
 };
 
-// ─── Mock Worker Database ─────────────────────────────────────────────────────
-
-// In real app, this would be fetched from database
-const mockWorkerProfiles: WorkerProfile[] = [
-  {
-    id: "worker-1",
-    name: "Priya Sharma",
-    email: "priya@example.com",
-    phone: "+91 98765 43210",
-    categories: ["hospitality", "events"],
-    location: { lat: 12.9716, lng: 77.5946 }, // Bangalore
-    availabilityStatus: "available",
-    isVerified: true,
-    rating: 4.8,
-    totalShifts: 85,
-    pushToken: "mock-push-token-1",
-    notificationPreferences: {
-      rapidJobAlerts: true,
-      maxDistanceKm: 5,
-    },
-  },
-  {
-    id: "worker-2",
-    name: "Rahul Kumar",
-    email: "rahul@example.com",
-    phone: "+91 98765 43211",
-    categories: ["hospitality", "warehouse"],
-    location: { lat: 12.9816, lng: 77.6046 }, // ~1.5km away
-    availabilityStatus: "available",
-    isVerified: true,
-    rating: 4.5,
-    totalShifts: 120,
-    pushToken: "mock-push-token-2",
-    notificationPreferences: {
-      rapidJobAlerts: true,
-      maxDistanceKm: 8,
-    },
-  },
-  {
-    id: "worker-3",
-    name: "Anjali Patel",
-    email: "anjali@example.com",
-    phone: "+91 98765 43212",
-    categories: ["events", "delivery"],
-    location: { lat: 12.9616, lng: 77.5846 }, // ~1km away
-    availabilityStatus: "busy",
-    isVerified: false,
-    rating: 4.2,
-    totalShifts: 45,
-    pushToken: "mock-push-token-3",
-    notificationPreferences: {
-      rapidJobAlerts: true,
-      maxDistanceKm: 3,
-    },
-  },
-  {
-    id: "worker-4",
-    name: "Vikram Singh",
-    email: "vikram@example.com",
-    phone: "+91 98765 43213",
-    categories: ["hospitality"],
-    location: { lat: 12.9916, lng: 77.6146 }, // ~2.5km away
-    availabilityStatus: "available",
-    isVerified: true,
-    rating: 4.9,
-    totalShifts: 200,
-    pushToken: "mock-push-token-4",
-    notificationPreferences: {
-      rapidJobAlerts: true,
-      maxDistanceKm: 10,
-    },
-  },
-  {
-    id: "worker-5",
-    name: "Sneha Reddy",
-    email: "sneha@example.com",
-    phone: "+91 98765 43214",
-    categories: ["warehouse", "delivery"],
-    location: { lat: 12.9516, lng: 77.5746 }, // ~2km away
-    availabilityStatus: "available",
-    isVerified: false,
-    rating: 4.0,
-    totalShifts: 30,
-    pushToken: "mock-push-token-5",
-    notificationPreferences: {
-      rapidJobAlerts: false, // Opted out
-      maxDistanceKm: 5,
-    },
-  },
-];
-
 // ─── Notification Tracking ────────────────────────────────────────────────────
 
 // In real app, this would be stored in database (Redis or DB)
@@ -209,8 +118,6 @@ export function recordWorkerResponse(
   });
 
   workerResponses.set(key, existing);
-
-  console.log(`📝 Recorded response: ${workerId} ${action} job ${jobId}`);
 }
 
 /**
@@ -352,200 +259,6 @@ function calculateWorkerPriority(worker: WorkerProfile, distance: number): numbe
 // ─── Main Notification Functions ──────────────────────────────────────────────
 
 /**
- * Find all eligible workers for a Rapid Job
- */
-export function findEligibleWorkers(job: BaseJob): Array<{
-  worker: WorkerProfile;
-  distance: number;
-  priority: number;
-}> {
-  const eligible: Array<{
-    worker: WorkerProfile;
-    distance: number;
-    priority: number;
-  }> = [];
-
-  // Parse job location (in real app, would be lat/lng from venue)
-  // Get area from location structure
-  const jobArea = getLocationArea(job.location);
-  const jobLocation = getJobLocationCoordinates(jobArea);
-
-  for (const worker of mockWorkerProfiles) {
-    const distance = calculateDistance(
-      jobLocation.lat,
-      jobLocation.lng,
-      worker.location.lat,
-      worker.location.lng,
-    );
-
-    if (isWorkerEligible(worker, job, distance)) {
-      const priority = calculateWorkerPriority(worker, distance);
-      eligible.push({ worker, distance, priority });
-    }
-  }
-
-  // Sort by priority (highest first)
-  eligible.sort((a, b) => b.priority - a.priority);
-
-  // Limit to max workers
-  return eligible.slice(0, NOTIFICATION_CONFIG.MAX_WORKERS_TO_NOTIFY);
-}
-
-/**
- * Get coordinates for a job location (mock implementation)
- * In real app, would geocode the venue address
- */
-function getJobLocationCoordinates(area: string): { lat: number; lng: number } {
-  // Mock coordinates for different areas in Bangalore
-  const areaCoordinates: Record<string, { lat: number; lng: number }> = {
-    Koramangala: { lat: 12.9352, lng: 77.6245 },
-    Indiranagar: { lat: 12.9716, lng: 77.6412 },
-    Whitefield: { lat: 12.9698, lng: 77.7499 },
-    "MG Road": { lat: 12.9759, lng: 77.6061 },
-    "Electronic City": { lat: 12.8456, lng: 77.6603 },
-    Jayanagar: { lat: 12.925, lng: 77.5838 },
-  };
-
-  return areaCoordinates[area] || { lat: 12.9716, lng: 77.5946 }; // Default to city center
-}
-
-/**
- * Send push notification to a worker
- * In real app, would use Firebase Cloud Messaging or similar service
- */
-async function sendPushNotification(
-  worker: WorkerProfile,
-  job: BaseJob,
-  distance: number,
-  isReminder: boolean = false,
-): Promise<boolean> {
-  try {
-    const notification = {
-      title: isReminder
-        ? `⏰ Reminder: ${job.jobTitle} Still Available`
-        : `⚡ Rapid Job Alert: ${job.jobTitle}`,
-      body: isReminder
-        ? `Still need ${job.positionsRemaining} workers • ₹${job.wage} • ${distance} km away`
-        : `${job.positionsRequired} positions • ₹${job.wage} • ${distance} km away`,
-      data: {
-        jobId: job.id,
-        jobTitle: job.jobTitle,
-        category: job.category,
-        positionsNeeded: job.positionsRemaining.toString(),
-        startTime: formatStartTime(job.date, job.startTime),
-        wage: `₹${job.wage}`,
-        distance: `${distance} km`,
-        venueName: isStructuredLocation(job.location) ? job.location.venueName : "Venue",
-        area: getLocationArea(job.location),
-        type: isReminder ? "rapid_job_reminder" : "rapid_job",
-        isReminder: isReminder.toString(),
-      },
-      sound: "default",
-      badge: 1,
-      priority: "high",
-      channelId: "rapid-jobs",
-    };
-
-    // In real app, would call FCM/APNS:
-    // await sendToDevice(worker.pushToken, notification);
-
-    console.log(
-      `📱 ${isReminder ? "REMINDER" : "Notification"} sent to ${worker.name}:`,
-      notification.title,
-    );
-
-    return true;
-  } catch (error) {
-    console.error(`Failed to send notification to ${worker.name}:`, error);
-    return false;
-  }
-}
-
-/**
- * Main function: Notify eligible workers about a Rapid Job
- */
-export async function notifyEligibleWorkers(
-  job: BaseJob,
-  isReminder: boolean = false,
-): Promise<{
-  totalNotified: number;
-  notifications: RapidJobNotification[];
-  eligibleWorkers: number;
-}> {
-  // Only process if it's a Rapid Job
-  if (!job.isRapidJob) {
-    return {
-      totalNotified: 0,
-      notifications: [],
-      eligibleWorkers: 0,
-    };
-  }
-
-  const eligible = findEligibleWorkers(job);
-  const notifications: RapidJobNotification[] = [];
-  let successCount = 0;
-
-  // If this is a reminder, filter out workers who already responded
-  let workersToNotify = eligible;
-  if (isReminder) {
-    const respondedWorkers = getRespondedWorkers(job.id);
-    workersToNotify = eligible.filter(({ worker }) => !respondedWorkers.has(worker.id));
-
-    console.log(`\n⏰ REMINDER NOTIFICATION for: ${job.jobTitle}`);
-    console.log(
-      `📍 Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`,
-    );
-    console.log(`👥 Original eligible: ${eligible.length} workers`);
-    console.log(`🚫 Already responded: ${respondedWorkers.size} workers`);
-    console.log(`✅ To notify: ${workersToNotify.length} workers\n`);
-  } else {
-    console.log(`\n🚀 Processing Rapid Job: ${job.jobTitle}`);
-    console.log(
-      `📍 Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`,
-    );
-    console.log(`👥 Found ${eligible.length} eligible workers\n`);
-  }
-
-  for (const { worker, distance, priority } of workersToNotify) {
-    console.log(
-      `   → ${worker.name}: ${distance}km away, priority ${priority.toFixed(1)} ${worker.isVerified ? "✓" : ""}`,
-    );
-
-    const success = await sendPushNotification(worker, job, distance, isReminder);
-
-    const notification: RapidJobNotification = {
-      workerId: worker.id,
-      jobId: job.id,
-      jobTitle: job.jobTitle,
-      positionsNeeded: job.positionsRemaining,
-      startTime: formatStartTime(job.date, job.startTime),
-      wage: `₹${job.wage}`,
-      distance: `${distance} km`,
-      venueName: isStructuredLocation(job.location) ? job.location.venueName : "Venue",
-      category: job.category,
-      sentAt: new Date(),
-      status: success ? "sent" : "failed",
-      isReminder,
-    };
-
-    notifications.push(notification);
-    logNotification(notification);
-
-    if (success) {
-      successCount++;
-    }
-  }
-
-  console.log(`\n✅ Successfully notified ${successCount}/${workersToNotify.length} workers\n`);
-
-  return {
-    totalNotified: successCount,
-    notifications,
-    eligibleWorkers: workersToNotify.length,
-  };
-}
-
-/**
  * Get notification statistics for a job
  */
 export function getNotificationStats(jobId: string): {
@@ -554,7 +267,6 @@ export function getNotificationStats(jobId: string): {
   opened: number;
   failed: number;
 } {
-  // In real app, would fetch from database
   return {
     sent: 0,
     delivered: 0,
@@ -565,7 +277,7 @@ export function getNotificationStats(jobId: string): {
 
 /**
  * Schedule a reminder notification for a Rapid Job
- * Automatically sends after REMINDER_DELAY_MS if job is still unfilled
+ * Placeholder for future implementation
  */
 export function scheduleReminderNotification(
   job: BaseJob,
@@ -574,125 +286,23 @@ export function scheduleReminderNotification(
     isCancelled: boolean;
   },
 ): void {
-  if (!job.isRapidJob) {
-    return;
-  }
-
-  // Clear any existing reminder for this job
-  const existingTimer = reminderTimers.get(job.id);
-  if (existingTimer) {
-    clearTimeout(existingTimer);
-  }
-
-  console.log(
-    `⏰ Scheduled reminder for "${job.jobTitle}" in ${NOTIFICATION_CONFIG.REMINDER_DELAY_MS / 1000 / 60} minutes`,
-  );
-
-  const timer = setTimeout(async () => {
-    console.log(`\n${"=".repeat(60)}`);
-    console.log(`⏰ REMINDER TIMER TRIGGERED for: ${job.jobTitle}`);
-    console.log(`${"=".repeat(60)}\n`);
-
-    // Check current job status
-    const status = getCurrentJobStatus();
-
-    console.log(`📊 Current Status:`);
-    console.log(`   Positions remaining: ${status.positionsRemaining}`);
-    console.log(`   Is cancelled: ${status.isCancelled}`);
-
-    // Don't send reminder if job is filled or cancelled
-    if (status.isCancelled) {
-      console.log(`\n❌ Job was cancelled - skipping reminder\n`);
-      reminderTimers.delete(job.id);
-      return;
-    }
-
-    if (status.positionsRemaining < NOTIFICATION_CONFIG.MIN_UNFILLED_FOR_REMINDER) {
-      console.log(`\n✅ Job is filled - skipping reminder\n`);
-      reminderTimers.delete(job.id);
-      return;
-    }
-
-    // Update job with current positions remaining
-    const updatedJob = {
-      ...job,
-      positionsRemaining: status.positionsRemaining,
-    };
-
-    // Send reminder to eligible workers who haven't responded
-    console.log(`\n📢 Sending reminder notifications...\n`);
-    const result = await notifyEligibleWorkers(updatedJob, true);
-
-    if (result.totalNotified > 0) {
-      console.log(`\n✅ Reminder sent to ${result.totalNotified} workers who haven't responded\n`);
-    } else {
-      console.log(`\n⚠️  No eligible workers to remind (all already responded)\n`);
-    }
-
-    // Clean up timer
-    reminderTimers.delete(job.id);
-  }, NOTIFICATION_CONFIG.REMINDER_DELAY_MS);
-
-  reminderTimers.set(job.id, timer);
+  // Future: implement reminder notifications with real worker database
 }
 
 /**
- * Cancel a scheduled reminder (e.g., if job gets filled or cancelled)
+ * Cancel a scheduled reminder
  */
 export function cancelReminderNotification(jobId: string): void {
   const timer = reminderTimers.get(jobId);
   if (timer) {
     clearTimeout(timer);
     reminderTimers.delete(jobId);
-    console.log(`🚫 Cancelled reminder for job ${jobId}`);
   }
 }
 
 /**
- * Get all active reminder timers (for debugging)
+ * Get all active reminder timers
  */
 export function getActiveReminders(): string[] {
   return Array.from(reminderTimers.keys());
-}
-
-/**
- * Test function to simulate notification system
- */
-export function testRapidJobNotifications(job: BaseJob): void {
-  console.log("\n" + "=".repeat(60));
-  console.log("🧪 TESTING RAPID JOB NOTIFICATION SYSTEM");
-  console.log("=".repeat(60));
-
-  const eligible = findEligibleWorkers(job);
-
-  console.log(`\n📋 Job Details:`);
-  console.log(`   Title: ${job.jobTitle}`);
-  console.log(`   Category: ${job.category}`);
-  console.log(
-    `   Location: ${isStructuredLocation(job.location) ? `${job.location.venueName}, ${job.location.area}` : getLocationArea(job.location)}`,
-  );
-  console.log(`   Positions: ${job.positionsRequired}`);
-  console.log(`   Wage: ₹${job.wage}`);
-  console.log(`   Is Rapid: ${job.isRapidJob ? "✅ Yes" : "❌ No"}`);
-
-  console.log(`\n📊 Worker Screening Results:`);
-  console.log(`   Total workers in system: ${mockWorkerProfiles.length}`);
-  console.log(`   Eligible workers found: ${eligible.length}`);
-
-  if (eligible.length === 0) {
-    console.log(`\n⚠️  No eligible workers found for this job.`);
-  } else {
-    console.log(`\n👥 Eligible Workers (sorted by priority):\n`);
-    eligible.forEach(({ worker, distance, priority }, index) => {
-      console.log(`   ${index + 1}. ${worker.name}`);
-      console.log(`      ⭐ Rating: ${worker.rating} (${worker.totalShifts} shifts)`);
-      console.log(`      📍 Distance: ${distance} km`);
-      console.log(`      🎯 Priority: ${priority.toFixed(1)}`);
-      console.log(`      ${worker.isVerified ? "✓ Verified" : "○ Not verified"}`);
-      console.log(`      📱 Push token: ${worker.pushToken ? "✓" : "✗"}`);
-      console.log("");
-    });
-  }
-
-  console.log("=".repeat(60) + "\n");
 }

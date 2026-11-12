@@ -48,7 +48,7 @@ type DbJobPosition = Database["public"]["Tables"]["job_positions"]["Row"];
  * Reconstructs nested location object and calculates derived fields.
  */
 export function dbJobToBaseJob(
-  dbJob: DbJob & { employer?: { name: string; is_verified: boolean } | null },
+  dbJob: DbJob & { employer?: { name: string | null; is_verified: boolean | null } | null },
   categories: DbJobCategory[],
   positions: DbJobPosition[],
 ): BaseJob {
@@ -203,6 +203,10 @@ export interface CreateJobParams {
     wage: number;
     requirements?: JobRequirements | undefined;
   }>;
+  reportingContact?: {
+    name: string;
+    phone: string;
+  } | undefined;
 }
 
 export interface GetJobsParams {
@@ -225,9 +229,7 @@ export class JobService {
    * 3. Optionally inserts reporting contact into job_private
    */
   static async createJob(
-    params: CreateJobParams & {
-      reportingContact?: { name: string; phone: string } | undefined;
-    },
+    params: CreateJobParams,
   ): Promise<{ success: true; jobId: string } | { success: false; error: string }> {
     const supabase = getSupabase();
     if (!supabase) {
@@ -404,11 +406,10 @@ export class JobService {
       // Order by created_at descending (newest first)
       query = query.order("created_at", { ascending: false });
 
-      // Apply pagination (use range() only, not both limit() and range())
-      if (params?.offset !== undefined && params?.limit) {
-        query = query.range(params.offset, params.offset + params.limit - 1);
-      } else if (params?.limit) {
-        query = query.limit(params.limit);
+      // Apply pagination - use range() for consistency
+      if (params?.limit) {
+        const offset = params.offset || 0;
+        query = query.range(offset, offset + params.limit - 1);
       }
 
       const { data: jobsData, error: jobsError, count } = await query;

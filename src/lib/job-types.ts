@@ -151,8 +151,8 @@ export interface BaseJob {
   employerId: string;
   
   // Employer info (joined from public_profiles)
-  employerName?: string;
-  isVerifiedEmployer?: boolean;
+  employerName?: string | undefined;
+  isVerifiedEmployer?: boolean | undefined;
 
   // New required fields
   jobTitle: string;

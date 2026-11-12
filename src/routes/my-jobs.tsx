@@ -131,348 +131,16 @@ interface JobRow {
   filledPositions: number;
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Supabase fetch ────────────────────────────────────────────────────────────
 
-function buildMockData(): JobRow[] {
-  const now = new Date();
-  const today = now.toISOString().split("T")[0]!;
 
-  return [
-    {
-      id: "mock-1",
-      job_title: "Wedding Event Staff",
-      venue_name: "Grand Sapphire Banquets",
-      area: "Gachibowli",
-      city: "Hyderabad",
-      job_date: today,
-      start_time: "19:00",
-      end_time: "23:00",
-      status: "PartiallyFilled",
-      is_rapid_job: true,
-      rapid_job_expires_at: new Date(now.getTime() + 90 * 60000).toISOString(),
-      categories: [
-        {
-          id: "c1",
-          name: "Food Serving",
-          required_workers: 5,
-          wage: 1200,
-          sort_order: 1,
-          booked: 3,
-          available: 1,
-          pending: 1,
-          positions: [
-            {
-              id: "p1",
-              position_number: 1,
-              status: "BOOKED",
-              worker_id: "w1",
-              application_id: "a1",
-              lock_expires_at: null,
-              worker: { name: "Rahul K.", avatar_url: null },
-            },
-            {
-              id: "p2",
-              position_number: 2,
-              status: "BOOKED",
-              worker_id: "w2",
-              application_id: "a2",
-              lock_expires_at: null,
-              worker: { name: "Sana M.", avatar_url: null },
-            },
-            {
-              id: "p3",
-              position_number: 3,
-              status: "BOOKED",
-              worker_id: "w3",
-              application_id: "a3",
-              lock_expires_at: null,
-              worker: { name: "Arjun R.", avatar_url: null },
-            },
-            {
-              id: "p4",
-              position_number: 4,
-              status: "PENDING",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: new Date(now.getTime() + 90000).toISOString(),
-              worker: null,
-            },
-            {
-              id: "p5",
-              position_number: 5,
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-              worker: null,
-            },
-          ],
-          applicants: [
-            {
-              id: "a1",
-              worker_id: "w1",
-              status: "ACCEPTED",
-              applied_at: new Date(now.getTime() - 3600000).toISOString(),
-              worker_note: "5 years exp.",
-              employer_note: null,
-              worker: { name: "Rahul K.", avatar_url: null },
-              position_number: 1,
-            } as ApplicantRow,
-            {
-              id: "a4",
-              worker_id: "w4",
-              status: "PENDING",
-              applied_at: new Date(now.getTime() - 1800000).toISOString(),
-              worker_note: "Available all day",
-              employer_note: null,
-              worker: { name: "Meena S.", avatar_url: null },
-            } as ApplicantRow,
-          ],
-        },
-        {
-          id: "c2",
-          name: "Liquor Serving",
-          required_workers: 3,
-          wage: 1400,
-          sort_order: 2,
-          booked: 2,
-          available: 1,
-          pending: 0,
-          positions: [
-            {
-              id: "p6",
-              position_number: 1,
-              status: "BOOKED",
-              worker_id: "w5",
-              application_id: "a5",
-              lock_expires_at: null,
-              worker: { name: "Vikram S.", avatar_url: null },
-            },
-            {
-              id: "p7",
-              position_number: 2,
-              status: "BOOKED",
-              worker_id: "w6",
-              application_id: "a6",
-              lock_expires_at: null,
-              worker: { name: "Priya D.", avatar_url: null },
-            },
-            {
-              id: "p8",
-              position_number: 3,
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-              worker: null,
-            },
-          ],
-          applicants: [],
-        },
-        {
-          id: "c3",
-          name: "Starters Serving",
-          required_workers: 2,
-          wage: 1200,
-          sort_order: 3,
-          booked: 2,
-          available: 0,
-          pending: 0,
-          positions: [
-            {
-              id: "p9",
-              position_number: 1,
-              status: "BOOKED",
-              worker_id: "w7",
-              application_id: "a7",
-              lock_expires_at: null,
-              worker: { name: "Deepa L.", avatar_url: null },
-            },
-            {
-              id: "p10",
-              position_number: 2,
-              status: "BOOKED",
-              worker_id: "w8",
-              application_id: "a8",
-              lock_expires_at: null,
-              worker: { name: "Suresh P.", avatar_url: null },
-            },
-          ],
-          applicants: [],
-        },
-        {
-          id: "c4",
-          name: "Juice Serving",
-          required_workers: 2,
-          wage: 1100,
-          sort_order: 4,
-          booked: 1,
-          available: 1,
-          pending: 0,
-          positions: [
-            {
-              id: "p11",
-              position_number: 1,
-              status: "BOOKED",
-              worker_id: "w9",
-              application_id: "a9",
-              lock_expires_at: null,
-              worker: { name: "Anita K.", avatar_url: null },
-            },
-            {
-              id: "p12",
-              position_number: 2,
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-              worker: null,
-            },
-          ],
-          applicants: [
-            {
-              id: "a10",
-              worker_id: "w10",
-              status: "PENDING",
-              applied_at: new Date(now.getTime() - 900000).toISOString(),
-              worker_note: null,
-              employer_note: null,
-              worker: { name: "Ravi T.", avatar_url: null },
-            } as ApplicantRow,
-          ],
-        },
-      ],
-      totalPositions: 12,
-      filledPositions: 8,
-    },
-    {
-      id: "mock-2",
-      job_title: "Corporate Conference Staff",
-      venue_name: "Hitex Exhibition Centre",
-      area: "HITEC City",
-      city: "Hyderabad",
-      job_date: (() => {
-        const d = new Date();
-        d.setDate(d.getDate() + 3);
-        return d.toISOString().split("T")[0]!;
-      })(),
-      start_time: "09:00",
-      end_time: "18:00",
-      status: "Open",
-      is_rapid_job: false,
-      rapid_job_expires_at: null,
-      categories: [
-        {
-          id: "c5",
-          name: "Registration Desk",
-          required_workers: 4,
-          wage: 1000,
-          sort_order: 1,
-          booked: 0,
-          available: 4,
-          pending: 0,
-          positions: [
-            {
-              id: "p13",
-              position_number: 1,
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-              worker: null,
-            },
-            {
-              id: "p14",
-              position_number: 2,
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-              worker: null,
-            },
-            {
-              id: "p15",
-              position_number: 3,
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-              worker: null,
-            },
-            {
-              id: "p16",
-              position_number: 4,
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-              worker: null,
-            },
-          ],
-          applicants: [
-            {
-              id: "a11",
-              worker_id: "w11",
-              status: "PENDING",
-              applied_at: new Date(now.getTime() - 7200000).toISOString(),
-              worker_note: "1 year event exp.",
-              employer_note: null,
-              worker: { name: "Kavitha R.", avatar_url: null },
-            } as ApplicantRow,
-            {
-              id: "a12",
-              worker_id: "w12",
-              status: "PENDING",
-              applied_at: new Date(now.getTime() - 5400000).toISOString(),
-              worker_note: null,
-              employer_note: null,
-              worker: { name: "Nikhil B.", avatar_url: null },
-            } as ApplicantRow,
-          ],
-        },
-        {
-          id: "c6",
-          name: "Stage Management",
-          required_workers: 2,
-          wage: 1300,
-          sort_order: 2,
-          booked: 0,
-          available: 2,
-          pending: 0,
-          positions: [
-            {
-              id: "p17",
-              position_number: 1,
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-              worker: null,
-            },
-            {
-              id: "p18",
-              position_number: 2,
-              status: "AVAILABLE",
-              worker_id: null,
-              application_id: null,
-              lock_expires_at: null,
-              worker: null,
-            },
-          ],
-          applicants: [],
-        },
-      ],
-      totalPositions: 6,
-      filledPositions: 0,
-    },
-  ];
-}
-
-// ─── Supabase data fetching ────────────────────────────────────────────────────
+// ─── Supabase fetch ────────────────────────────────────────────────────────────
 
 async function fetchEmployerJobs(employerId: string): Promise<JobRow[]> {
   const supabase = getSupabase();
-  if (!supabase) return buildMockData();
+  if (!supabase) {
+    throw new Error("Supabase client not initialized");
+  }
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -498,37 +166,44 @@ async function fetchEmployerJobs(employerId: string): Promise<JobRow[]> {
       .eq("employer_id", employerId)
       .order("created_at", { ascending: false });
 
-    if (error || !jobs) return buildMockData();
+    if (error || !jobs) {
+      console.error("Failed to fetch employer jobs:", error);
+      throw new Error(error?.message || "Failed to fetch jobs");
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (jobs as any[]).map((job) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const categories: CategoryRow[] = ((job.job_categories ?? []) as any[])
-        .sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((cat: any) => {
+        .sort((a: any, b: any) => a.sort_order - b.sort_order)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          required_workers: cat.required_workers,
+          wage: cat.wage,
+          sort_order: cat.sort_order,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const positions: PositionRow[] = (cat.job_positions ?? []) as any[];
-          const booked = positions.filter((p) => p.status === "BOOKED").length;
-          const available = positions.filter((p) => p.status === "AVAILABLE").length;
-          const pending = positions.filter((p) => p.status === "PENDING").length;
-          return {
-            id: cat.id,
-            name: cat.name,
-            required_workers: cat.required_workers,
-            wage: cat.wage,
-            sort_order: cat.sort_order,
-            booked,
-            available,
-            pending,
-            positions: positions.sort((a, b) => a.position_number - b.position_number),
+          positions: ((cat.job_positions ?? []) as any[]).sort(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            applicants: (cat.applications ?? []) as any[],
-          };
-        });
-
-      const totalPositions = categories.reduce((s, c) => s + c.required_workers, 0);
-      const filledPositions = categories.reduce((s, c) => s + c.booked, 0);
+            (a: any, b: any) => a.position_number - b.position_number,
+          ),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          applicants: ((cat.applications ?? []) as any[]).map((app: any) => ({
+            ...app,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            position_number: (cat.job_positions as any[])?.find(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (p: any) => p.id === app.position_id,
+            )?.position_number,
+          })),
+          booked: cat.job_positions.filter((p: { status: string }) => p.status === "BOOKED").length,
+          available: cat.job_positions.filter((p: { status: string }) => p.status === "AVAILABLE")
+            .length,
+          pending: cat.job_positions.filter((p: { status: string }) => p.status === "PENDING")
+            .length,
+        }));
 
       return {
         id: job.id,
@@ -539,16 +214,17 @@ async function fetchEmployerJobs(employerId: string): Promise<JobRow[]> {
         job_date: job.job_date,
         start_time: (job.start_time as string).slice(0, 5),
         end_time: (job.end_time as string).slice(0, 5),
-        status: job.status as DBJobStatus,
+        status: job.status,
         is_rapid_job: job.is_rapid_job,
         rapid_job_expires_at: job.rapid_job_expires_at,
         categories,
-        totalPositions,
-        filledPositions,
+        totalPositions: categories.reduce((s, c) => s + c.required_workers, 0),
+        filledPositions: categories.reduce((s, c) => s + c.booked, 0),
       };
     });
-  } catch {
-    return buildMockData();
+  } catch (error) {
+    console.error("Exception fetching employer jobs:", error);
+    throw error instanceof Error ? error : new Error("Failed to fetch jobs");
   }
 }
 
@@ -740,13 +416,11 @@ function ApplicantRow({
   app,
   jobId,
   enterDelay,
-  isMock,
   onStatusChange,
 }: {
   app: ApplicantRow;
   jobId: string;
   enterDelay: number;
-  isMock: boolean;
   onStatusChange: (appId: string, status: AppStatus) => void;
 }) {
   const [acting, setActing] = useState(false);
@@ -754,15 +428,13 @@ function ApplicantRow({
 
   async function handleAccept() {
     setActing(true);
-    if (!isMock) {
-      const res = await ApplicationService.updateApplicationStatus(app.id, "ACCEPTED");
-      if (!res.success) {
-        toast.error("Failed to accept application");
-        setActing(false);
-        return;
-      }
-    } else {
-      await new Promise((r) => setTimeout(r, 400));
+    const res = await ApplicationService.employerUpdateApplication(app.id, "ACCEPTED");
+    if (!res.success) {
+      toast.error("Failed to accept application", {
+        description: res.error || "Unable to update application status. Please try again.",
+      });
+      setActing(false);
+      return;
     }
     toast.success(`${app.worker?.name ?? "Applicant"} accepted!`);
     onStatusChange(app.id, "ACCEPTED");
@@ -771,15 +443,13 @@ function ApplicantRow({
 
   async function handleReject() {
     setActing(true);
-    if (!isMock) {
-      const res = await ApplicationService.updateApplicationStatus(app.id, "REJECTED");
-      if (!res.success) {
-        toast.error("Failed to reject application");
-        setActing(false);
-        return;
-      }
-    } else {
-      await new Promise((r) => setTimeout(r, 400));
+    const res = await ApplicationService.employerUpdateApplication(app.id, "REJECTED");
+    if (!res.success) {
+      toast.error("Failed to reject application", {
+        description: res.error || "Unable to update application status. Please try again.",
+      });
+      setActing(false);
+      return;
     }
     onStatusChange(app.id, "REJECTED");
     setActing(false);
@@ -874,13 +544,11 @@ function CategorySection({
   cat,
   job,
   defaultOpen,
-  isMock,
   onApplicationStatusChange,
 }: {
   cat: CategoryRow;
   job: JobRow;
   defaultOpen: boolean;
-  isMock: boolean;
   onApplicationStatusChange: (catId: string, appId: string, status: AppStatus) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -979,7 +647,6 @@ function CategorySection({
                     app={app}
                     jobId={job.id}
                     enterDelay={i * 50}
-                    isMock={isMock}
                     onStatusChange={handleStatusChange}
                   />
                 ))}
@@ -1003,12 +670,10 @@ function CategorySection({
 function JobCard({
   job,
   enterDelay,
-  isMock,
   onUpdate,
 }: {
   job: JobRow;
   enterDelay: number;
-  isMock: boolean;
   onUpdate: (jobId: string, catId: string, appId: string, status: AppStatus) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -1152,7 +817,6 @@ function JobCard({
               cat={cat}
               job={job}
               defaultOpen={i === 0}
-              isMock={isMock}
               onApplicationStatusChange={(catId, appId, status) =>
                 onUpdate(job.id, catId, appId, status)
               }
@@ -1267,12 +931,6 @@ function MyJobsContent() {
                   </>
                 )}
               </p>
-              {isMock && (
-                <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-500/35 bg-amber-500/8 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-400">
-                  <AlertCircle className="size-3" />
-                  Preview mode — connect Supabase for live data
-                </div>
-              )}
             </div>
             <div className="flex items-center gap-2.5">
               <Button
@@ -1387,7 +1045,6 @@ function MyJobsContent() {
                 key={job.id}
                 job={job}
                 enterDelay={i * 60}
-                isMock={isMock}
                 onUpdate={handleAppUpdate}
               />
             ))}

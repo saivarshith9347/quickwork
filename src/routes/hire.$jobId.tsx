@@ -377,7 +377,7 @@ function ApplicantCard({
       // Call employer_update_application RPC
       const { data, error } = await client.rpc("employer_update_application", {
         p_application_id: app.id,
-        p_new_status: newStatus,
+        p_status: newStatus,
       });
 
       if (error) {
@@ -689,7 +689,6 @@ function CategorySection({
                     key={app.id}
                     app={app}
                     enterDelay={i * 55}
-                    isMock={isMock}
                     onUpdate={(appId, status) => handleUpdate(appId, status)}
                   />
                 ))}
@@ -730,7 +729,7 @@ function HireJobPage() {
       setLoading(true);
       const data = await fetchJobDetail(jobId);
       if (!cancelled) {
-        setIsMock(!user?.id || (data.id === jobId && jobId.startsWith("mock-") === true));
+        setIsMock(!user?.id || (Boolean(data && data.id === jobId && jobId.startsWith("mock-"))));
         setJob(data);
         setLoading(false);
       }

@@ -248,45 +248,6 @@ function ReviewPage() {
       return;
     }
 
-    const isMock = booking.jobId.startsWith("mock") || !getSupabase();
-    if (isMock) {
-      setConfirming(true);
-      await new Promise((r) => setTimeout(r, 600));
-      const applicationId = `app-mock-${Date.now()}`;
-      sessionStorage.setItem(
-        "qw_confirmed_booking",
-        JSON.stringify({
-          applicationId,
-          positionId: booking.positionId,
-          categoryName: booking.categoryName,
-          positionNumber: booking.positionNumber,
-          wage: booking.wage,
-          jobId: booking.jobId,
-          jobTitle: booking.jobTitle,
-          jobDate: booking.jobDate,
-          startTime: booking.startTime,
-          endTime: booking.endTime,
-          area: booking.area,
-          venueName: booking.venueName,
-          isRapidJob: booking.isRapidJob,
-        }),
-      );
-      sessionStorage.removeItem("qw_pending_booking");
-      // Broadcast booked status to other workers & tabs immediately
-      broadcastPositionUpdate(booking.jobId, {
-        id: booking.positionId,
-        job_id: booking.jobId,
-        status: "BOOKED",
-        position_number: booking.positionNumber,
-        category_id: booking.categoryId,
-        worker_id: user?.id ?? "mock_worker",
-      });
-
-      setConfirming(false);
-      void navigate({ to: "/apply/success" });
-      return;
-    }
-
     if (!isLoggedIn) {
       openLoginModal({ type: "book-shift", payload: booking.jobId });
       return;
@@ -309,9 +270,8 @@ function ReviewPage() {
       setConfirming(false);
       const code = result.error ?? "unknown";
       setErrorCode(code);
-      setConfirmError(
-        CONFIRM_BOOKING_ERRORS[code] ?? result.error ?? "This position is no longer available.",
-      );
+      const errorMessage = CONFIRM_BOOKING_ERRORS[code] ?? result.error;
+      setConfirmError(errorMessage || "This position is no longer available.");
       return;
     }
 
